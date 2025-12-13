@@ -1,38 +1,52 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../supabase_client.dart';
 
 class AuthService {
-  final SupabaseClient supabase = Supabase.instance.client;
+  final supabase = SupabaseClientInstance.supabase;
 
   // Sign Up
   Future<String?> signUp(String email, String password, String role) async {
-    final response = await supabase.auth.signUp(email: email, password: password);
+    final response = await supabase.auth.signUp(
+      email: email,
+      password: password,
+    );
+
     if (response.user != null) {
-      // Add role to profiles table
       await supabase.from('profiles').insert({
         'id': response.user!.id,
         'role': role,
       });
-      return null; // success
+      return null;
+    } else if (response.error != null) {
+      return response.error!.message;
     } else {
-      return response.error?.message ?? 'Unknown error';
+      return 'Unknown error';
     }
   }
 
   // Sign In
   Future<String?> signIn(String email, String password) async {
-    final response = await supabase.auth.signInWithPassword(email: email, password: password);
-    return response.error?.message;
+    final response = await supabase.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
+
+    if (response.session != null) {
+      return null;
+    } else if (response.error != null) {
+      return response.error!.message;
+    } else {
+      return 'Unknown error';
+    }
   }
 
   // Password Reset
   Future<String?> resetPassword(String email) async {
-    final response = await supabase.auth.resetPasswordForEmail(email: email);
-    return response.error?.message;
-  }
-
-  // Check if logged in
-  bool isLoggedIn() {
-    return supabase.auth.currentUser != null;
+    try {
+      await supabase.auth.resetPasswordForEmail(email);
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
   }
 
   // Logout
