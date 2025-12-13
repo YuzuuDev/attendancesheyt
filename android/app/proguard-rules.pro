@@ -1,11 +1,16 @@
-# Keep Tink crypto classes
+# Tink optional classes (ignore missing)
+-dontwarn com.google.api.client.**
 -keep class com.google.crypto.tink.** { *; }
 
-# Keep javax annotation classes
--keep class javax.annotation.** { *; }
+# Joda-Time optional classes
+-dontwarn org.joda.convert.**
+-keep class org.joda.time.** { *; }
 
-# Keep errorprone annotations
+# ErrorProne annotations
+-dontwarn com.google.errorprone.annotations.**
 -keep class com.google.errorprone.annotations.** { *; }
 
-# Keep Joda-Time classes
--keep class org.joda.time.** { *; }
+# javax annotations
+-dontwarn javax.lang.model.element.**
+-dontwarn javax.annotation.**
+-keep class javax.annotation.** { *; }
