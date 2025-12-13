@@ -4,6 +4,10 @@ plugins {
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+dependencies {
+    implementation 'com.google.errorprone:error_prone_annotations:2.16'
+    implementation 'com.google.code.findbugs:jsr305:3.0.2'
+}
 
 android {
     namespace = "com.example.gameflutter"
