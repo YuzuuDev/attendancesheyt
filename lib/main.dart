@@ -1,36 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'pages/sign_in_page.dart';
-import 'theme.dart';
-import 'services/music_service.dart';
-import 'package:flutter/services.dart';
-
-const String SUPABASE_URL = 'https://hwnrfdorpsazrujmoxhl.supabase.co';
-const String SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3bnJmZG9ycHNhenJ1am1veGhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1NDg1NDQsImV4cCI6MjA3NTEyNDU0NH0.iynHcMIAVTPxaoYL94OldQnLh7DD0SRJkaTXg7ckGc8';
+import 'screens/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-  await Supabase.initialize(url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY);
-
-  MusicService().playLooping('assets/audio/analogmemory.mp3');
-
-  runApp(const QuizMasterApp());
+  await Supabase.initialize(
+    url: 'https://cvgrnnobgegbuioetkud.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN2Z3Jubm9iZ2VnYnVpb2V0a3VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1MjA0MDIsImV4cCI6MjA4MTA5NjQwMn0.jeznMcCyf1unOYrKpm8ayf4jwVb_kGoWFDGRZT_QJqw',
+  );
+  runApp(MyApp());
 }
 
-class QuizMasterApp extends StatelessWidget {
-  const QuizMasterApp({super.key});
-
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'QuizBIT',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: const SignInPage(),
+      title: 'Smart Attendance',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: LoginScreen(),
     );
   }
 }
