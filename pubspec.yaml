@@ -9,14 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  supabase_flutter: ^2.7.1
-  flutter_secure_storage: ^9.1.1
-  mobile_scanner: ^7.0.1
+  supabase_flutter: ^1.2.0
+  flutter_secure_storage: ^8.0.0 # For persistent login
 
-  provider: ^6.1.5
-  uuid: ^4.3.1
-  intl: ^0.18.1
-  http: ^1.3.0
 
 
 dev_dependencies:
