@@ -21,9 +21,8 @@ class AuthService {
         return null; // success
       }
 
+      // If no user, sign up failed
       return "Sign up failed";
-    } on GoTrueException catch (e) {
-      return e.message;
     } catch (e) {
       return e.toString();
     }
@@ -42,20 +41,16 @@ class AuthService {
       }
 
       return "Login failed";
-    } on GoTrueException catch (e) {
-      return e.message;
     } catch (e) {
       return e.toString();
     }
   }
 
-  // Password Reset
+  // Reset Password
   Future<String?> resetPassword(String email) async {
     try {
       await supabase.auth.resetPasswordForEmail(email);
       return null; // success
-    } on GoTrueException catch (e) {
-      return e.message;
     } catch (e) {
       return e.toString();
     }
