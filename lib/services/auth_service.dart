@@ -13,14 +13,15 @@ class AuthService {
       );
 
       if (response.user != null) {
-        // Add role to profiles table
         await supabase.from('profiles').insert({
           'id': response.user!.id,
           'role': role,
         });
         return null; // success
+      } else if (response.error != null) {
+        return response.error!.message;
       } else {
-        return "Sign up failed";
+        return "Unknown signup error";
       }
     } catch (e) {
       return e.toString();
@@ -30,15 +31,17 @@ class AuthService {
   // Sign In
   Future<String?> signIn(String email, String password) async {
     try {
-      final SessionResponse response = await supabase.auth.signInWithPassword(
+      final AuthResponse response = await supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
-      if (response.session != null) {
+      if (response.user != null) {
         return null; // success
+      } else if (response.error != null) {
+        return response.error!.message;
       } else {
-        return "Login failed";
+        return "Unknown login error";
       }
     } catch (e) {
       return e.toString();
@@ -49,7 +52,7 @@ class AuthService {
   Future<String?> resetPassword(String email) async {
     try {
       await supabase.auth.resetPasswordForEmail(email);
-      return null;
+      return null; // success
     } catch (e) {
       return e.toString();
     }
