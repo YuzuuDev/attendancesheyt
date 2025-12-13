@@ -1,21 +1,28 @@
-import 'package:flutter/material.dart';                // For Flutter widgets
-import 'supabase_client.dart';                        // Your Supabase init
-import 'screens/login_screen.dart';                           // Login page
-import 'screens/home_screen.dart';   
+import 'package:flutter/material.dart';
+import 'screens/login_screen.dart';
+import 'screens/home_screen.dart';
+import 'supabase_client.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SupabaseClientInstance.init();
 
-  runApp(MyApp());
+  final isLoggedIn =
+      SupabaseClientInstance.supabase.auth.currentUser != null;
+
+  runApp(MyApp(isLoggedIn: isLoggedIn));
 }
 
 class MyApp extends StatelessWidget {
+  final bool isLoggedIn;
+  const MyApp({required this.isLoggedIn, super.key});
+
   @override
   Widget build(BuildContext context) {
-    final isLoggedIn = Supabase.instance.client.auth.currentUser != null;
-
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Smart Attendance',
+      theme: ThemeData(primarySwatch: Colors.blue),
       home: isLoggedIn ? HomeScreen() : LoginScreen(),
     );
   }
