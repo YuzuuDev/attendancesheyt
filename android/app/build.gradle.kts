@@ -43,7 +43,6 @@ dependencies {
     // Supabase / Tink support
     implementation("com.google.errorprone:error_prone_annotations:2.16")
     implementation("com.google.code.findbugs:jsr305:3.0.2")
-    implementation("com.google.api-client:google-api-client:1.34.2")
     implementation("joda-time:joda-time:2.12.5")
 }
 
