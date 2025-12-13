@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'auth_service.dart';
-import 'home_screen.dart';
-import 'supabase_client.dart';
+import '../services/auth_service.dart';
+import '../home_screen.dart';
+import '../supabase_client.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
