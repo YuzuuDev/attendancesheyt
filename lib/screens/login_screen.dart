@@ -79,6 +79,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: _resetPassword,
                         child: Text("Forgot Password?"),
                       ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => SignUpScreen()),
+                          );
+                        },
+                        child: Text("Don't have an account? Sign Up"),
+                      ),
+
                     ],
                   ),
           ],
