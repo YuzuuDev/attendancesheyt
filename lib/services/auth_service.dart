@@ -7,22 +7,23 @@ class AuthService {
   // Sign Up
   Future<String?> signUp(String email, String password, String role) async {
     try {
-      final AuthResponse response = await supabase.auth.signUp(
+      final response = await supabase.auth.signUp(
         email: email,
         password: password,
       );
 
       if (response.user != null) {
+        // Add role to profiles table
         await supabase.from('profiles').insert({
           'id': response.user!.id,
           'role': role,
         });
         return null; // success
-      } else if (response.error != null) {
-        return response.error!.message;
-      } else {
-        return "Unknown signup error";
       }
+
+      return "Sign up failed";
+    } on GoTrueException catch (e) {
+      return e.message;
     } catch (e) {
       return e.toString();
     }
@@ -31,18 +32,18 @@ class AuthService {
   // Sign In
   Future<String?> signIn(String email, String password) async {
     try {
-      final AuthResponse response = await supabase.auth.signInWithPassword(
+      final response = await supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
       if (response.user != null) {
         return null; // success
-      } else if (response.error != null) {
-        return response.error!.message;
-      } else {
-        return "Unknown login error";
       }
+
+      return "Login failed";
+    } on GoTrueException catch (e) {
+      return e.message;
     } catch (e) {
       return e.toString();
     }
@@ -53,6 +54,8 @@ class AuthService {
     try {
       await supabase.auth.resetPasswordForEmail(email);
       return null; // success
+    } on GoTrueException catch (e) {
+      return e.message;
     } catch (e) {
       return e.toString();
     }
