@@ -50,6 +50,24 @@ class ClassService {
     return response as List<Map<String, dynamic>>;
   }
 
+  // Get all classes created by a teacher
+  Future<List<Map<String, dynamic>>> getTeacherClasses(String teacherId) async {
+    final response = await _supabase
+        .from('classes')
+        .select('id, name, code')
+        .eq('teacher_id', teacherId);
+    return response as List<Map<String, dynamic>>;
+  }
+
+  // Get all classes a student joined
+  Future<List<Map<String, dynamic>>> getStudentClasses(String studentId) async {
+    final response = await _supabase
+        .from('class_students')
+        .select('class_id, classes(name, code)')
+        .eq('student_id', studentId);
+    return response as List<Map<String, dynamic>>;
+  }
+
   // HELPER: GENERATE 6-DIGIT CODE
   String _generateClassCode() {
     final random = DateTime.now().millisecondsSinceEpoch.remainder(1000000);
