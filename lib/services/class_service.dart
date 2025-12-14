@@ -40,16 +40,27 @@ class ClassService {
     }
   }
 
-  // 🔥 FIXED JOIN
+  // ✅ THIS WILL WORK. NO FK MAGIC.
   Future<List<Map<String, dynamic>>> getStudents(String classId) async {
-    final response = await _supabase
+    // 1️⃣ Get student IDs
+    final classStudents = await _supabase
         .from('class_students')
-        .select(
-          'student_id, profiles!class_students_student_id_fkey(full_name, role)',
-        )
+        .select('student_id')
         .eq('class_id', classId);
 
-    return List<Map<String, dynamic>>.from(response);
+    if (classStudents.isEmpty) return [];
+
+    final studentIds = classStudents
+        .map((row) => row['student_id'] as String)
+        .toList();
+
+    // 2️⃣ Get profiles
+    final profiles = await _supabase
+        .from('profiles')
+        .select('id, full_name, role')
+        .in_('id', studentIds);
+
+    return List<Map<String, dynamic>>.from(profiles);
   }
 
   Future<List<Map<String, dynamic>>> getTeacherClasses(String teacherId) async {
