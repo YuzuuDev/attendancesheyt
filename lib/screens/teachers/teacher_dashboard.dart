@@ -38,6 +38,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   void _showStudents(String classId, String className) async {
     final students = await classService.getStudents(classId);
 
+    // Fix: Supabase returns List<Map<String, dynamic>> where profile data is under 'profiles'
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -54,7 +55,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                   shrinkWrap: true,
                   itemCount: students.length,
                   itemBuilder: (_, index) {
-                    final profile = students[index]['profiles'];
+                    final profile = students[index]['profiles'] ?? {};
                     return Card(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
