@@ -41,28 +41,41 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text("Students in $className"),
+        backgroundColor: Colors.green[50],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text("Students in $className", style: TextStyle(color: Colors.green[800])),
         content: SizedBox(
           width: double.maxFinite,
           child: students.isEmpty
-              ? const Text("No students enrolled")
+              ? Center(child: Text("No students enrolled"))
               : ListView.builder(
                   shrinkWrap: true,
                   itemCount: students.length,
                   itemBuilder: (_, index) {
-                    final s = students[index];
-                    return ListTile(
-                      leading: const Icon(Icons.person),
-                      title: Text(s['full_name'] ?? 'Unknown'),
-                      subtitle: Text(s['role'] ?? ''),
+                    final student = students[index];
+                    return Card(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      color: Colors.green[100],
+                      child: ListTile(
+                        title: Text(student['full_name'] ?? "Unknown"),
+                        subtitle: Text(student['role'] ?? ""),
+                      ),
                     );
                   },
                 ),
         ),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.green[200],
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () => Navigator.pop(context),
-            child: const Text("Close"),
+            child: Text("Close", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -71,51 +84,67 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    if (isLoading) return Scaffold(body: Center(child: CircularProgressIndicator()));
 
     return Scaffold(
+      backgroundColor: Colors.green[50],
       appBar: AppBar(
-        title: const Text("Teacher Dashboard"),
+        title: Text("Teacher Dashboard"),
+        backgroundColor: Colors.green[400],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(25)),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: Icon(Icons.logout),
             onPressed: _logout,
+            tooltip: "Logout",
           ),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            ElevatedButton(
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green[300],
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                elevation: 5,
+              ),
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => CreateClassScreen()),
                 ).then((_) => _loadClasses());
               },
-              child: const Text("Create Class"),
+              icon: Icon(Icons.add, color: Colors.white),
+              label: Text("Create New Class", style: TextStyle(color: Colors.white)),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             Expanded(
               child: classes.isEmpty
-                  ? const Center(child: Text("No classes created"))
+                  ? Center(child: Text("No classes created yet", style: TextStyle(color: Colors.green[900])))
                   : ListView.builder(
                       itemCount: classes.length,
                       itemBuilder: (_, index) {
                         final cls = classes[index];
                         return Card(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          color: Colors.green[100],
+                          margin: EdgeInsets.symmetric(vertical: 8),
                           child: ListTile(
-                            title: Text(cls['name']),
+                            title: Text(cls['name'], style: TextStyle(fontWeight: FontWeight.bold)),
                             subtitle: Text("Code: ${cls['code']}"),
-                            trailing: ElevatedButton(
-                              onPressed: () =>
-                                  _showStudents(cls['id'], cls['name']),
-                              child: const Text("Students"),
+                            trailing: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green[300],
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                              ),
+                              icon: Icon(Icons.group, color: Colors.white),
+                              label: Text("Students", style: TextStyle(color: Colors.white)),
+                              onPressed: () => _showStudents(cls['id'], cls['name']),
                             ),
                           ),
                         );
