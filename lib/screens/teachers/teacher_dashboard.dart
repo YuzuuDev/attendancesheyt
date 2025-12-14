@@ -36,7 +36,13 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   }
 
   void _showStudents(String classId, String className) async {
-    final students = await classService.getStudents(classId);
+    List<Map<String, dynamic>> students = [];
+
+    try {
+      students = await classService.getStudents(classId);
+    } catch (_) {
+      students = [];
+    }
 
     showDialog(
       context: context,
@@ -101,25 +107,23 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: classes.isEmpty
-                  ? const Center(child: Text("No classes created yet"))
-                  : ListView.builder(
-                      itemCount: classes.length,
-                      itemBuilder: (_, index) {
-                        final cls = classes[index];
-                        return Card(
-                          child: ListTile(
-                            title: Text(cls['name']),
-                            subtitle: Text("Code: ${cls['code']}"),
-                            trailing: ElevatedButton(
-                              onPressed: () =>
-                                  _showStudents(cls['id'], cls['name']),
-                              child: const Text("Students"),
-                            ),
-                          ),
-                        );
-                      },
+              child: ListView.builder(
+                itemCount: classes.length,
+                itemBuilder: (_, index) {
+                  final cls = classes[index];
+                  return Card(
+                    child: ListTile(
+                      title: Text(cls['name']),
+                      subtitle: Text("Code: ${cls['code']}"),
+                      trailing: ElevatedButton(
+                        onPressed: () =>
+                            _showStudents(cls['id'], cls['name']),
+                        child: const Text("Students"),
+                      ),
                     ),
+                  );
+                },
+              ),
             ),
           ],
         ),
