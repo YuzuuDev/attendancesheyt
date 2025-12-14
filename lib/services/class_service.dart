@@ -53,10 +53,11 @@ class ClassService {
         .map((row) => row['student_id'] as String)
         .toList();
 
+    // Properly fetch profiles using .in_()
     final profiles = await _supabase
         .from('profiles')
         .select('id, full_name, role')
-        .filter('id', 'in', '(${studentIds.map((e) => "'$e'").join(",")})');
+        .in_('id', studentIds);
 
     return List<Map<String, dynamic>>.from(profiles);
   }
