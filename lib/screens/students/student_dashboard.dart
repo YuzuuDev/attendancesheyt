@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/class_service.dart';
-import '../supabase_client.dart';
+import '../../services/class_service.dart';
+import '../../supabase_client.dart';
 import 'join_class_screen.dart';
 
 class StudentDashboard extends StatefulWidget {
