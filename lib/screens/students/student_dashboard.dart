@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/class_service.dart';
+import '../../services/auth_service.dart';
 import '../../supabase_client.dart';
 import 'join_class_screen.dart';
 
@@ -10,6 +11,7 @@ class StudentDashboard extends StatefulWidget {
 
 class _StudentDashboardState extends State<StudentDashboard> {
   final ClassService classService = ClassService();
+  final AuthService authService = AuthService();
   List<Map<String, dynamic>> classes = [];
   bool isLoading = true;
 
@@ -28,20 +30,37 @@ class _StudentDashboardState extends State<StudentDashboard> {
     });
   }
 
+  void _logout() async {
+    await authService.signOut();
+    Navigator.pushReplacementNamed(context, '/login');
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (isLoading) return Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (isLoading) {
+      return Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return Scaffold(
-      appBar: AppBar(title: Text("Student Dashboard")),
+      appBar: AppBar(
+        title: Text("Student Dashboard"),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: _logout,
+          ),
+        ],
+      ),
       body: Padding(
         padding: EdgeInsets.all(20),
         child: Column(
           children: [
             ElevatedButton(
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => JoinClassScreen()))
-                    .then((_) => _loadClasses());
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => JoinClassScreen()),
+                ).then((_) => _loadClasses());
               },
               child: Text("Join Class"),
             ),
