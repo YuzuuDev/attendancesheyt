@@ -1,35 +1,83 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import 'login_screen.dart';
+import '../supabase_client.dart';
+import 'teachers/create_class_screen.dart';
+import 'students/join_class_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
   final AuthService authService = AuthService();
+  String role = '';
+  bool isLoading = true;
 
-  void _logout(BuildContext context) async {
+  @override
+  void initState() {
+    super.initState();
+    _loadUserRole();
+  }
+
+  void _loadUserRole() async {
+    final userId = SupabaseClientInstance.supabase.auth.currentUser!.id;
+    final response = await SupabaseClientInstance.supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+
+    setState(() {
+      role = response?['role'] ?? 'student';
+      isLoading = false;
+    });
+  }
+
+  void _logout() async {
     await authService.signOut();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => LoginScreen()),
-    );
+    Navigator.pushReplacementNamed(context, '/login');
   }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) return Scaffold(body: Center(child: CircularProgressIndicator()));
+
     return Scaffold(
       appBar: AppBar(
         title: Text("Home"),
         actions: [
-          IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: () => _logout(context),
-          ),
+          IconButton(onPressed: _logout, icon: Icon(Icons.logout)),
         ],
       ),
-      body: Center(
-        child: Text(
-          "Welcome! You are logged in.",
-          style: TextStyle(fontSize: 20),
-        ),
+      body: Padding(
+        padding: EdgeInsets.all(20),
+        child: role == 'teacher'
+            ? Column(
+                children: [
+                  ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                            context, MaterialPageRoute(builder: (_) => CreateClassScreen()));
+                      },
+                      child: Text("Create Class")),
+                  SizedBox(height: 10),
+                  // You can later add "View My Classes" button here
+                  Text("You are logged in as Teacher"),
+                ],
+              )
+            : Column(
+                children: [
+                  ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                            context, MaterialPageRoute(builder: (_) => JoinClassScreen()));
+                      },
+                      child: Text("Join Class")),
+                  SizedBox(height: 10),
+                  Text("You are logged in as Student"),
+                ],
+              ),
       ),
     );
   }
