@@ -40,9 +40,8 @@ class ClassService {
     }
   }
 
-  // ✅ THIS WILL WORK. NO FK MAGIC.
+  // GET STUDENTS
   Future<List<Map<String, dynamic>>> getStudents(String classId) async {
-    // 1️⃣ Get student IDs
     final classStudents = await _supabase
         .from('class_students')
         .select('student_id')
@@ -54,11 +53,10 @@ class ClassService {
         .map((row) => row['student_id'] as String)
         .toList();
 
-    // 2️⃣ Get profiles
     final profiles = await _supabase
         .from('profiles')
         .select('id, full_name, role')
-        .in_('id', studentIds);
+        .filter('id', 'in', '(${studentIds.map((e) => "'$e'").join(",")})');
 
     return List<Map<String, dynamic>>.from(profiles);
   }
