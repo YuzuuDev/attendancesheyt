@@ -49,11 +49,10 @@ class ClassService {
 
     if (classStudents.isEmpty) return [];
 
-    final studentIds = classStudents
-        .map((row) => row['student_id'] as String)
-        .toList();
+    // Extract IDs
+    final studentIds = classStudents.map((row) => row['student_id'] as String).toList();
 
-    // Properly fetch profiles using .in_()
+    // Fetch profiles
     final profiles = await _supabase
         .from('profiles')
         .select('id, full_name, role')
@@ -62,6 +61,7 @@ class ClassService {
     return List<Map<String, dynamic>>.from(profiles);
   }
 
+  // GET TEACHER CLASSES
   Future<List<Map<String, dynamic>>> getTeacherClasses(String teacherId) async {
     final response = await _supabase
         .from('classes')
@@ -71,6 +71,7 @@ class ClassService {
     return List<Map<String, dynamic>>.from(response);
   }
 
+  // GET STUDENT CLASSES
   Future<List<Map<String, dynamic>>> getStudentClasses(String studentId) async {
     final response = await _supabase
         .from('class_students')
