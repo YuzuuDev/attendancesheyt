@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/class_service.dart';
+import '../../services/auth_service.dart';
 import '../../supabase_client.dart';
 import 'create_class_screen.dart';
 
@@ -10,6 +11,7 @@ class TeacherDashboard extends StatefulWidget {
 
 class _TeacherDashboardState extends State<TeacherDashboard> {
   final ClassService classService = ClassService();
+  final AuthService authService = AuthService();
   List<Map<String, dynamic>> classes = [];
   bool isLoading = true;
 
@@ -28,28 +30,39 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     });
   }
 
+  void _logout() async {
+    await authService.signOut();
+    Navigator.pushReplacementNamed(context, '/login');
+  }
+
   void _showStudents(String classId, String className) async {
     final students = await classService.getStudents(classId);
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: Text("Students in $className"),
-        content: Container(
+        content: SizedBox(
           width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: students.length,
-            itemBuilder: (_, index) {
-              final student = students[index]['profiles'];
-              return ListTile(
-                title: Text(student['full_name'] ?? "Unknown"),
-                subtitle: Text(student['role'] ?? ""),
-              );
-            },
-          ),
+          child: students.isEmpty
+              ? Center(child: Text("No students enrolled"))
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: students.length,
+                  itemBuilder: (_, index) {
+                    final profile = students[index]['profiles'];
+                    return ListTile(
+                      title: Text(profile['full_name'] ?? "Unknown"),
+                      subtitle: Text(profile['role'] ?? ""),
+                    );
+                  },
+                ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text("Close"))
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Close"),
+          ),
         ],
       ),
     );
@@ -57,18 +70,30 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) return Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (isLoading) {
+      return Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return Scaffold(
-      appBar: AppBar(title: Text("Teacher Dashboard")),
+      appBar: AppBar(
+        title: Text("Teacher Dashboard"),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: _logout,
+          ),
+        ],
+      ),
       body: Padding(
         padding: EdgeInsets.all(20),
         child: Column(
           children: [
             ElevatedButton(
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => CreateClassScreen()))
-                    .then((_) => _loadClasses());
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => CreateClassScreen()),
+                ).then((_) => _loadClasses());
               },
               child: Text("Create New Class"),
             ),
@@ -84,7 +109,8 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                       subtitle: Text("Code: ${cls['code']}"),
                       trailing: IconButton(
                         icon: Icon(Icons.group),
-                        onPressed: () => _showStudents(cls['id'], cls['name']),
+                        onPressed: () =>
+                            _showStudents(cls['id'], cls['name']),
                       ),
                     ),
                   );
