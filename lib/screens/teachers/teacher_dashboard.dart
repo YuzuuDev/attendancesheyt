@@ -36,13 +36,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   }
 
   void _showStudents(String classId, String className) async {
-    List<Map<String, dynamic>> students = [];
-
-    try {
-      students = await classService.getStudents(classId);
-    } catch (_) {
-      students = [];
-    }
+    final students = await classService.getStudents(classId);
 
     showDialog(
       context: context,
@@ -51,15 +45,16 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         content: SizedBox(
           width: double.maxFinite,
           child: students.isEmpty
-              ? const Center(child: Text("No students enrolled"))
+              ? const Text("No students enrolled")
               : ListView.builder(
                   shrinkWrap: true,
                   itemCount: students.length,
                   itemBuilder: (_, index) {
                     final profile = students[index]['profiles'];
+
                     return ListTile(
-                      title: Text(profile['full_name'] ?? 'Unknown'),
-                      subtitle: Text(profile['role'] ?? ''),
+                      title: Text(profile?['full_name'] ?? 'Unknown'),
+                      subtitle: Text(profile?['role'] ?? ''),
                     );
                   },
                 ),
@@ -107,23 +102,25 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: ListView.builder(
-                itemCount: classes.length,
-                itemBuilder: (_, index) {
-                  final cls = classes[index];
-                  return Card(
-                    child: ListTile(
-                      title: Text(cls['name']),
-                      subtitle: Text("Code: ${cls['code']}"),
-                      trailing: ElevatedButton(
-                        onPressed: () =>
-                            _showStudents(cls['id'], cls['name']),
-                        child: const Text("Students"),
-                      ),
+              child: classes.isEmpty
+                  ? const Center(child: Text("No classes"))
+                  : ListView.builder(
+                      itemCount: classes.length,
+                      itemBuilder: (_, index) {
+                        final cls = classes[index];
+                        return Card(
+                          child: ListTile(
+                            title: Text(cls['name']),
+                            subtitle: Text("Code: ${cls['code']}"),
+                            trailing: ElevatedButton(
+                              onPressed: () =>
+                                  _showStudents(cls['id'], cls['name']),
+                              child: const Text("Students"),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),
