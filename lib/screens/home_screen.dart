@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../supabase_client.dart';
-import 'teachers/create_class_screen.dart';
-import 'students/join_class_screen.dart';
+import 'teachers/teacher_dashboard.dart';
+import 'students/student_dashboard.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -41,44 +41,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) return Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (isLoading) {
+      return Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
         title: Text("Home"),
         actions: [
-          IconButton(onPressed: _logout, icon: Icon(Icons.logout)),
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: _logout,
+          )
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.all(20),
-        child: role == 'teacher'
-            ? Column(
-                children: [
-                  ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                            context, MaterialPageRoute(builder: (_) => CreateClassScreen()));
-                      },
-                      child: Text("Create Class")),
-                  SizedBox(height: 10),
-                  // You can later add "View My Classes" button here
-                  Text("You are logged in as Teacher"),
-                ],
-              )
-            : Column(
-                children: [
-                  ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                            context, MaterialPageRoute(builder: (_) => JoinClassScreen()));
-                      },
-                      child: Text("Join Class")),
-                  SizedBox(height: 10),
-                  Text("You are logged in as Student"),
-                ],
-              ),
-      ),
+      // Role-based dashboards
+      body: role == 'teacher'
+          ? TeacherDashboard()
+          : StudentDashboard(),
     );
   }
 }
