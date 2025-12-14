@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class ClassService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
+  // CREATE CLASS
   Future<String?> createClass(String name, String teacherId) async {
     try {
       final code = _generateClassCode();
@@ -17,6 +18,7 @@ class ClassService {
     }
   }
 
+  // JOIN CLASS
   Future<String?> joinClass(String code, String studentId) async {
     try {
       final cls = await _supabase
@@ -38,13 +40,17 @@ class ClassService {
     }
   }
 
-  // ✅ THIS IS THE CRITICAL FIX
+  // ✅ FIXED: THIS IS THE IMPORTANT PART
   Future<List<Map<String, dynamic>>> getStudents(String classId) async {
     final response = await _supabase
         .from('class_students')
-        .select(
-          'student_id, profiles!class_students_student_id_fkey(full_name, role)',
-        )
+        .select('''
+          student_id,
+          profiles:profiles!profiles_pkey (
+            full_name,
+            role
+          )
+        ''')
         .eq('class_id', classId);
 
     return List<Map<String, dynamic>>.from(response);
@@ -62,7 +68,7 @@ class ClassService {
   Future<List<Map<String, dynamic>>> getStudentClasses(String studentId) async {
     final response = await _supabase
         .from('class_students')
-        .select('classes(name, code)')
+        .select('class_id, classes(name, code)')
         .eq('student_id', studentId);
 
     return List<Map<String, dynamic>>.from(response);
