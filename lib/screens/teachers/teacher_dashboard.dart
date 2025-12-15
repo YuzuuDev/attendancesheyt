@@ -36,8 +36,25 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   }
 
   void _showStudents(String classId, String className) async {
+    // ✅ Show a loading dialog first
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: SizedBox(
+          height: 80,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ),
+    );
+
+    // Fetch students
     final students = await classService.getStudents(classId);
 
+    // Close loading
+    Navigator.pop(context);
+
+    // Show actual students
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -51,7 +68,6 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                   itemCount: students.length,
                   itemBuilder: (_, index) {
                     final profile = students[index]['profiles'];
-
                     return ListTile(
                       title: Text(profile?['full_name'] ?? 'Unknown'),
                       subtitle: Text(profile?['role'] ?? ''),
