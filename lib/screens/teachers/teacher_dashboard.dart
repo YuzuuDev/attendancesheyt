@@ -31,9 +31,33 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   }
 
   void _logout() async {
-    await authService.signOut();
-    Navigator.pushReplacementNamed(context, '/login');
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Log Out"),
+        content: const Text("Do you want to log out?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("No"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Yes"),
+          ),
+        ],
+      ),
+    );
+  
+    if (shouldLogout == true) {
+      await authService.signOut();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => LoginScreen()),
+      );
+    }
   }
+
 
   void _showStudents(String classId, String className) async {
     // ✅ Show a loading dialog first
