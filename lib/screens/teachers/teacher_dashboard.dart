@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/class_service.dart';
 import '../../services/auth_service.dart';
 import '../../supabase_client.dart';
+import '../login_screen.dart';
 import 'create_class_screen.dart';
 
 class TeacherDashboard extends StatefulWidget {
