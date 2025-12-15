@@ -38,20 +38,27 @@ class ClassService {
     }
   }
 
-  /// ✅ FIXED: use !inner to correctly get profiles
+  /// ✅ Fixed: manually fetch profiles to avoid missing foreign key relationship
   Future<List<Map<String, dynamic>>> getStudents(String classId) async {
     final response = await _supabase
         .from('class_students')
-        .select('''
-          student_id,
-          profiles!inner (
-            full_name,
-            role
-          )
-        ''')
+        .select('student_id')
         .eq('class_id', classId);
 
-    return List<Map<String, dynamic>>.from(response);
+    List<Map<String, dynamic>> students = List<Map<String, dynamic>>.from(response);
+
+    for (var i = 0; i < students.length; i++) {
+      final studentId = students[i]['student_id'];
+      final profile = await _supabase
+          .from('profiles')
+          .select('full_name, role')
+          .eq('id', studentId)
+          .maybeSingle();
+
+      students[i]['profiles'] = profile;
+    }
+
+    return students;
   }
 
   Future<List<Map<String, dynamic>>> getTeacherClasses(String teacherId) async {
