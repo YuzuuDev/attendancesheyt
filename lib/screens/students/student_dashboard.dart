@@ -3,6 +3,7 @@ import '../../services/class_service.dart';
 import '../../services/auth_service.dart';
 import '../../supabase_client.dart';
 import 'join_class_screen.dart';
+import '../login_screen.dart';
 
 class StudentDashboard extends StatefulWidget {
   @override
@@ -30,28 +31,57 @@ class _StudentDashboardState extends State<StudentDashboard> {
     });
   }
 
+  /// ✅ FIXED LOGOUT WITH CONFIRMATION DIALOG
   void _logout() async {
-    await authService.signOut();
-    Navigator.pushReplacementNamed(context, '/login');
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Log Out"),
+        content: const Text("Do you want to log out?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("No"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Yes"),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true) {
+      await authService.signOut();
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => LoginScreen()),
+        (route) => false,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) return Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.green[50],
       appBar: AppBar(
-        title: Text("Student Dashboard"),
+        title: const Text("Student Dashboard"),
         backgroundColor: Colors.green[400],
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(25)),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: _logout,
+            icon: const Icon(Icons.logout),
             tooltip: "Logout",
+            onPressed: _logout, // ✅ WORKING NOW
           ),
         ],
       ),
@@ -62,12 +92,17 @@ class _StudentDashboardState extends State<StudentDashboard> {
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green[300],
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
                 elevation: 5,
               ),
-              icon: Icon(Icons.add, color: Colors.white),
-              label: Text("Join Class", style: TextStyle(color: Colors.white)),
+              icon: const Icon(Icons.add, color: Colors.white),
+              label: const Text(
+                "Join Class",
+                style: TextStyle(color: Colors.white),
+              ),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -75,20 +110,30 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 ).then((_) => _loadClasses());
               },
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Expanded(
               child: classes.isEmpty
-                  ? Center(child: Text("No classes joined yet", style: TextStyle(color: Colors.green[900])))
+                  ? Center(
+                      child: Text(
+                        "No classes joined yet",
+                        style: TextStyle(color: Colors.green[900]),
+                      ),
+                    )
                   : ListView.builder(
                       itemCount: classes.length,
                       itemBuilder: (_, index) {
                         final cls = classes[index]['classes'];
                         return Card(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                           color: Colors.green[100],
-                          margin: EdgeInsets.symmetric(vertical: 8),
+                          margin: const EdgeInsets.symmetric(vertical: 8),
                           child: ListTile(
-                            title: Text(cls['name'], style: TextStyle(fontWeight: FontWeight.bold)),
+                            title: Text(
+                              cls['name'],
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
                             subtitle: Text("Code: ${cls['code']}"),
                           ),
                         );
