@@ -38,12 +38,13 @@ class ClassService {
     }
   }
 
+  /// ✅ FIXED: use !inner to correctly get profiles
   Future<List<Map<String, dynamic>>> getStudents(String classId) async {
     final response = await _supabase
         .from('class_students')
         .select('''
           student_id,
-          profiles:profiles!profiles_pkey (
+          profiles!inner (
             full_name,
             role
           )
