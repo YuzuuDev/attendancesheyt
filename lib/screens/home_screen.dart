@@ -46,18 +46,10 @@ class _HomeScreenState extends State<HomeScreen> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-
     return Scaffold(
       appBar: AppBar(
         title: Text("Home"),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: _logout,
-          )
-        ],
-      ),
-      
+      ),    
       body: role == 'teacher'
           ? TeacherDashboard()
           : StudentDashboard(),
