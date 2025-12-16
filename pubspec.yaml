@@ -12,11 +12,7 @@ dependencies:
   supabase_flutter: ^2.10.2
   flutter_secure_storage: ^8.0.0 # For persistent login
    # QR Code generation
-  qr_flutter: ^4.0.0
-
- # QR Code scanning (REPLACEMENT)
-   # QR Code scanning (replacement)
-  flutter_qr_bar_scanner: ^1.0.0
+  qr_code_scanner_plus: ^2.0.14
 
   # UUID for unique codes
   uuid: ^3.0.7
