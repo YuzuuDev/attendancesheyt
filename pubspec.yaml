@@ -15,7 +15,8 @@ dependencies:
   qr_flutter: ^4.0.0
 
  # QR Code scanning (REPLACEMENT)
-  qr_code_scanner: ^1.0.1
+   # QR Code scanning (replacement)
+  flutter_qr_bar_scanner: ^1.0.0
 
   # UUID for unique codes
   uuid: ^3.0.7
