@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_qr_bar_scanner/qr_bar_scanner_camera.dart';
+import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
 import '../../services/class_service.dart';
 import '../../supabase_client.dart';
 
@@ -10,14 +10,17 @@ class StudentQRScanScreen extends StatefulWidget {
 
 class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
   final AttendanceService attendanceService = AttendanceService();
-  bool isScanning = true;
+  final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   String? message;
+  bool scanned = false;
 
-  void _onQRViewCreated(String code) async {
-    if (!isScanning) return;
-    setState(() => isScanning = false);
+  void _onScan(Barcode result) async {
+    if (scanned) return; // Prevent duplicates
+    scanned = true;
 
+    final code = result.code;
     final studentId = SupabaseClientInstance.supabase.auth.currentUser!.id;
+
     final error = await attendanceService.scanQR(code, studentId);
 
     setState(() => message = error ?? "Attendance recorded successfully");
@@ -30,13 +33,16 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
       body: Column(
         children: [
           Expanded(
-            child: isScanning
-                ? QRBarScannerCamera(
-                    onError: (context, error) => Text(error.toString()),
-                    qrCodeCallback: _onQRViewCreated,
-                  )
-                : Center(child: Text(message ?? "Done")),
+            child: QRScanner(
+              key: qrKey,
+              formats: [BarcodeFormat.qrCode],
+              onScannerCreated: (controller) {
+                controller.start();
+                controller.scannedDataStream.listen(_onScan);
+              },
+            ),
           ),
+
           if (message != null)
             Padding(
               padding: EdgeInsets.all(20),
