@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:flutter_qr_bar_scanner/qr_bar_scanner_camera.dart';
 import '../../services/class_service.dart';
 import '../../supabase_client.dart';
 
@@ -10,27 +10,17 @@ class StudentQRScanScreen extends StatefulWidget {
 
 class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
   final AttendanceService attendanceService = AttendanceService();
-  final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
+  bool isScanning = true;
   String? message;
-  QRViewController? controller;
 
-  @override
-  void dispose() {
-    controller?.dispose();
-    super.dispose();
-  }
+  void _onQRViewCreated(String code) async {
+    if (!isScanning) return;
+    setState(() => isScanning = false);
 
-  void _onQRViewCreated(QRViewController ctrl) {
-    controller = ctrl;
-    controller!.scannedDataStream.listen((scanData) async {
-      final code = scanData.code;
-      if (code != null) {
-        final studentId = SupabaseClientInstance.supabase.auth.currentUser!.id;
-        final error = await attendanceService.scanQR(code, studentId);
+    final studentId = SupabaseClientInstance.supabase.auth.currentUser!.id;
+    final error = await attendanceService.scanQR(code, studentId);
 
-        setState(() => message = error ?? "Attendance recorded successfully");
-      }
-    });
+    setState(() => message = error ?? "Attendance recorded successfully");
   }
 
   @override
@@ -40,10 +30,12 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
       body: Column(
         children: [
           Expanded(
-            child: QRView(
-              key: qrKey,
-              onQRViewCreated: _onQRViewCreated,
-            ),
+            child: isScanning
+                ? QRBarScannerCamera(
+                    onError: (context, error) => Text(error.toString()),
+                    qrCodeCallback: _onQRViewCreated,
+                  )
+                : Center(child: Text(message ?? "Done")),
           ),
           if (message != null)
             Padding(
