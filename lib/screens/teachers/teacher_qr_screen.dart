@@ -21,8 +21,6 @@ class _TeacherQRScreenState extends State<TeacherQRScreen> {
   List<Map<String, dynamic>> scannedStudents = [];
   Timer? timer;
 
-  QrCode? qrCode; // new QR object for qr_flutter 4.x
-
   @override
   void initState() {
     super.initState();
@@ -40,10 +38,7 @@ class _TeacherQRScreenState extends State<TeacherQRScreen> {
     endTime = startTime!.add(const Duration(minutes: 15));
     qrCodeString = "${widget.classId}-${startTime!.millisecondsSinceEpoch}";
 
-    qrCode = QrCode(4, QrErrorCorrectLevel.L); // 4 = version, L = low error correction
-    qrCode!.addData(qrCodeString!);
-    qrCode!.make();
-
+    // Insert session into Supabase
     final response = await SupabaseClientInstance.supabase
         .from('attendance_sessions')
         .insert({
@@ -58,6 +53,7 @@ class _TeacherQRScreenState extends State<TeacherQRScreen> {
 
     sessionId = response?['id'] ?? '';
 
+    // Start timer to update scanned students
     timer = Timer.periodic(const Duration(seconds: 5), (_) => _loadScannedStudents());
 
     setState(() {});
@@ -93,15 +89,17 @@ class _TeacherQRScreenState extends State<TeacherQRScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            if (qrCode != null)
+            if (qrCodeString != null)
               Column(
                 children: [
-                  QrImage(
-                    qr: qrCode!, // ✅ use qr object
+                  QrImageView(
+                    data: qrCodeString!,
+                    version: QrVersions.auto,
                     size: 250,
+                    gapless: false,
                   ),
                   const SizedBox(height: 10),
-                  Text("Scan this QR code to mark attendance"),
+                  const Text("Scan this QR code to mark attendance"),
                   const SizedBox(height: 10),
                   Text("Countdown: ${_countdown()}"),
                   const SizedBox(height: 20),
