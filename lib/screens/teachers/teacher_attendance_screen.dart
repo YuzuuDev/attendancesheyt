@@ -47,14 +47,30 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     if (session != null) {
       final sessionId = session['id'];
 
-      // ✅ Fixed: ensure we fetch the attendance with student profiles
+      // fetch attendance records first
       final records = await SupabaseClientInstance.supabase
           .from('attendance_records')
-          .select('student_id, status, scanned_at, profiles(full_name)')
+          .select('student_id, status, scanned_at')
           .eq('session_id', sessionId);
 
+      final List<Map<String, dynamic>> tempList = [];
+
+      // manually fetch profiles for each student
+      for (var record in records) {
+        final profile = await SupabaseClientInstance.supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', record['student_id'])
+            .maybeSingle();
+
+        tempList.add({
+          ...record,
+          'profiles': profile,
+        });
+      }
+
       setState(() {
-        scannedStudents = List<Map<String, dynamic>>.from(records);
+        scannedStudents = tempList;
       });
     }
   }
@@ -103,6 +119,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     );
   }
 }
+
 
 /*import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
