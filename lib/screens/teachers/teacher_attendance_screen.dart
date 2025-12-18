@@ -1,29 +1,31 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import '../../supabase_client.dart';
 
 class TeacherAttendanceScreen extends StatefulWidget {
   final String classId;
   final String className;
 
-  TeacherAttendanceScreen({required this.classId, required this.className});
+  const TeacherAttendanceScreen({
+    required this.classId,
+    required this.className,
+    super.key,
+  });
 
   @override
   State<TeacherAttendanceScreen> createState() => _TeacherAttendanceScreenState();
 }
 
 class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
-  String? qrCode;
-  String sessionId = '';
   List<Map<String, dynamic>> scannedStudents = [];
   Timer? timer;
-  bool isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _startSession();
+    _loadScannedStudents();
+    // auto-refresh every 5s
+    timer = Timer.periodic(const Duration(seconds: 5), (_) => _loadScannedStudents());
   }
 
   @override
@@ -32,51 +34,20 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     super.dispose();
   }
 
-  Future<void> _startSession() async {
-    setState(() => isLoading = true);
-
-    final teacherId = SupabaseClientInstance.supabase.auth.currentUser!.id;
-    final now = DateTime.now();
-    final endTime = now.add(const Duration(minutes: 15));
-
-    qrCode = "${widget.classId}|${now.millisecondsSinceEpoch}";
-
-    final response = await SupabaseClientInstance.supabase
-        .from('attendance_sessions')
-        .insert({
-          'class_id': widget.classId,
-          'teacher_id': teacherId,
-          'start_time': now.toIso8601String(),
-          'end_time': endTime.toIso8601String(),
-          'qr_code': qrCode,
-        })
-        .select('id')
-        .maybeSingle();
-
-    sessionId = response?['id'] ?? '';
-
-    // Start live refresh every 5 seconds
-    timer = Timer.periodic(Duration(seconds: 5), (_) => _loadScannedStudents());
-
-    setState(() => isLoading = false);
-  }
-
   Future<void> _loadScannedStudents() async {
-    if (sessionId.isEmpty) return;
+    try {
+      // fetch attendance records for this class
+      final records = await SupabaseClientInstance.supabase
+          .from('attendance_records')
+          .select('student_id, status, scanned_at, profiles(full_name)')
+          .eq('session_id', widget.classId); // use actual session id if needed
 
-    final records = await SupabaseClientInstance.supabase
-        .from('attendance_records')
-        .select('student_id, status, scanned_at')
-        .eq('session_id', sessionId);
-
-    setState(() {
-      scannedStudents = List<Map<String, dynamic>>.from(records);
-    });
-  }
-
-  String _countdown() {
-    if (qrCode == null || sessionId.isEmpty) return '';
-    return 'Live updates every 5s';
+      setState(() {
+        scannedStudents = List<Map<String, dynamic>>.from(records);
+      });
+    } catch (e) {
+      debugPrint("Error fetching scanned students: $e");
+    }
   }
 
   @override
@@ -84,32 +55,21 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     return Scaffold(
       appBar: AppBar(title: Text("Attendance - ${widget.className}")),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            if (qrCode != null) ...[
-              QrImage(data: qrCode!, version: QrVersions.auto, size: 200),
-              const SizedBox(height: 10),
-              Text("Scan this QR code to mark attendance"),
-              const SizedBox(height: 5),
-              Text(_countdown()),
-              const SizedBox(height: 20),
-            ],
-            ElevatedButton(
-              onPressed: _loadScannedStudents,
-              child: Text("Refresh Scanned Students"),
-            ),
-            const SizedBox(height: 20),
             Expanded(
               child: scannedStudents.isEmpty
-                  ? const Center(child: Text("No students scanned yet"))
+                  ? const Center(child: Text("No students have scanned yet"))
                   : ListView.builder(
                       itemCount: scannedStudents.length,
                       itemBuilder: (_, index) {
-                        final s = scannedStudents[index];
+                        final student = scannedStudents[index];
+                        final profile = student['profiles'];
                         return ListTile(
-                          title: Text(s['student_id']), // raw student_id
-                          subtitle: Text(s['status'] ?? 'unknown'),
+                          title: Text(profile?['full_name'] ?? student['student_id']),
+                          subtitle: Text(student['status'] ?? 'unknown'),
+                          trailing: Text(student['scanned_at'] ?? ''),
                         );
                       },
                     ),
@@ -120,6 +80,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     );
   }
 }
+
 
 
 
