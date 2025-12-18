@@ -4,6 +4,7 @@ import '../../services/auth_service.dart';
 import '../../supabase_client.dart';
 import '../login_screen.dart';
 import 'create_class_screen.dart';
+import 'teacher_qr_screen.dart';
 
 class TeacherDashboard extends StatefulWidget {
   @override
