@@ -12,6 +12,7 @@ class StudentQRScanScreen extends StatefulWidget {
 class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? controller;
+
   bool scanned = false;
   String? message;
 
@@ -22,48 +23,52 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
   }
 
   Future<void> _onScan(Barcode result) async {
-    if (scanned) return; // prevent duplicates
+    if (scanned) return;
     scanned = true;
 
-    final code = result.code;
-    if (code == null) {
+    final qrData = result.code;
+    if (qrData == null) {
       setState(() => message = "Invalid QR code");
+      scanned = false;
       return;
     }
 
-    final studentId = SupabaseClientInstance.supabase.auth.currentUser!.id;
+    final studentId =
+        SupabaseClientInstance.supabase.auth.currentUser!.id;
 
-    // Parse QR code: classId-timestamp
-    final parts = code.split('-');
+    // QR FORMAT: classId-timestamp
+    final parts = qrData.split('-');
     if (parts.length != 2) {
-      setState(() => message = "QR code format invalid");
+      setState(() => message = "Invalid QR format");
+      scanned = false;
       return;
     }
 
     final classId = parts[0];
     final timestamp = int.tryParse(parts[1]);
     if (timestamp == null) {
-      setState(() => message = "QR code timestamp invalid");
+      setState(() => message = "Invalid QR timestamp");
+      scanned = false;
       return;
     }
 
     final qrTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
     final now = DateTime.now();
 
-    // Determine attendance status
     String status;
-    final diff = now.difference(qrTime).inMinutes;
-    if (diff <= 15) {
+    final diffMinutes = now.difference(qrTime).inMinutes;
+
+    if (diffMinutes <= 15) {
       status = "on-time";
-    } else if (diff <= 30) {
+    } else if (diffMinutes <= 30) {
       status = "late";
     } else {
       status = "absent";
     }
 
     try {
-      // Get latest session for this class
-      final sessionResp = await SupabaseClientInstance.supabase
+      // 🔹 Get latest active session
+      final session = await SupabaseClientInstance.supabase
           .from('attendance_sessions')
           .select('id, end_time')
           .eq('class_id', classId)
@@ -71,53 +76,46 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
           .limit(1)
           .maybeSingle();
 
-      final sessionId = sessionResp?['id'];
-      final sessionEnd = DateTime.tryParse(sessionResp?['end_time'] ?? '');
-
-      if (sessionId == null || sessionEnd == null) {
-        setState(() => message = "Attendance session not found");
+      if (session == null) {
+        setState(() => message = "No active attendance session");
         scanned = false;
         return;
       }
+
+      final sessionId = session['id'];
+      final sessionEnd =
+          DateTime.parse(session['end_time']);
 
       if (now.isAfter(sessionEnd.add(const Duration(minutes: 15)))) {
         status = "absent";
       }
 
-      // Insert attendance record with conflict handling
-      final response = await SupabaseClientInstance.supabase
+      // 🔹 INSERT — rely on UNIQUE constraint
+      await SupabaseClientInstance.supabase
           .from('attendance_records')
           .insert({
             'session_id': sessionId,
             'student_id': studentId,
             'status': status,
-          })
-          .onConflict(['session_id', 'student_id'])
-          .merge()
-          .select()
-          .maybeSingle();
+          });
 
-      if (response == null) {
-        setState(() => message = "Already scanned");
-      } else {
-        setState(() => message = "Attendance recorded: $status");
-      }
+      setState(() => message = "Attendance recorded: $status");
     } catch (e) {
-      setState(() => message = "Error recording attendance: $e");
-      scanned = false;
+      // 🔹 UNIQUE constraint violation lands here
+      setState(() => message = "Already scanned");
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Scan QR Code")),
+      appBar: AppBar(title: const Text("Scan Attendance QR")),
       body: Column(
         children: [
           Expanded(
             child: QRView(
               key: qrKey,
-              onQRViewCreated: (QRViewController ctrl) {
+              onQRViewCreated: (ctrl) {
                 controller = ctrl;
                 controller!.scannedDataStream.listen(_onScan);
               },
@@ -125,16 +123,19 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
           ),
           if (message != null)
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               child: Text(
                 message!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16, color: Colors.green),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ElevatedButton(
             onPressed: () {
-              scanned = false; // reset for new scan
+              scanned = false;
               setState(() => message = null);
             },
             child: const Text("Scan Again"),
