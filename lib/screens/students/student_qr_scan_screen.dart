@@ -76,6 +76,7 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
 
       if (sessionId == null || sessionEnd == null) {
         setState(() => message = "Attendance session not found");
+        scanned = false;
         return;
       }
 
@@ -83,25 +84,27 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
         status = "absent";
       }
 
-      // Insert attendance record (without execute)
-      final insertResp = await SupabaseClientInstance.supabase
+      // Insert attendance record with conflict handling
+      final response = await SupabaseClientInstance.supabase
           .from('attendance_records')
           .insert({
             'session_id': sessionId,
             'student_id': studentId,
             'status': status,
           })
+          .onConflict(['session_id', 'student_id'])
+          .merge()
           .select()
           .maybeSingle();
 
-      if (insertResp == null) {
-        setState(() => message = "Already scanned or duplicate");
-        return;
+      if (response == null) {
+        setState(() => message = "Already scanned");
+      } else {
+        setState(() => message = "Attendance recorded: $status");
       }
-
-      setState(() => message = "Attendance recorded: $status");
     } catch (e) {
       setState(() => message = "Error recording attendance: $e");
+      scanned = false;
     }
   }
 
@@ -129,6 +132,13 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
                 style: const TextStyle(fontSize: 16, color: Colors.green),
               ),
             ),
+          ElevatedButton(
+            onPressed: () {
+              scanned = false; // reset for new scan
+              setState(() => message = null);
+            },
+            child: const Text("Scan Again"),
+          ),
         ],
       ),
     );
