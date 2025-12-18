@@ -36,7 +36,6 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
   void _refreshScans() async {
     if (qrCode == null) return;
 
-    // fetch latest session by QR code
     final session = await SupabaseClientInstance.supabase
         .from('attendance_sessions')
         .select('*')
@@ -55,7 +54,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
 
       final List<Map<String, dynamic>> tempList = [];
 
-      // manually fetch profiles for each student
+      // manually fetch profiles
       for (var record in records) {
         final profile = await SupabaseClientInstance.supabase
             .from('profiles')
@@ -119,6 +118,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     );
   }
 }
+
 
 
 /*import 'package:flutter/material.dart';
