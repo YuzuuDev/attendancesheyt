@@ -11,9 +11,9 @@ class StudentQRScanScreen extends StatefulWidget {
 
 class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
-  String? message;
+  QRViewController? controller;
   bool scanned = false;
-  QRController? controller;
+  String? message;
 
   @override
   void dispose() {
@@ -22,7 +22,7 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
   }
 
   Future<void> _onScan(Barcode result) async {
-    if (scanned) return; // Prevent duplicates
+    if (scanned) return; // Prevent duplicate scans
     scanned = true;
 
     final code = result.code;
@@ -33,9 +33,9 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
 
     final studentId = SupabaseClientInstance.supabase.auth.currentUser!.id;
 
-    // Extract session info from QR code
+    // Parse QR code (format: classId-timestamp)
     final parts = code.split('-');
-    if (parts.length < 2) {
+    if (parts.length != 2) {
       setState(() => message = "QR code format invalid");
       return;
     }
@@ -50,7 +50,6 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
     final qrTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
     final now = DateTime.now();
 
-    // Determine attendance status
     String status;
     final diff = now.difference(qrTime).inMinutes;
     if (diff <= 15) {
@@ -62,7 +61,7 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
     }
 
     try {
-      // Find the session
+      // Get the latest session for this class
       final sessionResp = await SupabaseClientInstance.supabase
           .from('attendance_sessions')
           .select('id, end_time')
@@ -91,12 +90,11 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
             'student_id': studentId,
             'status': status,
           })
-          .onConflict('session_id,student_id')
-          .ignore()
           .execute();
 
       if (insertResp.error != null) {
-        setState(() => message = "Already scanned or error: ${insertResp.error!.message}");
+        setState(() => message =
+            "Already scanned or error: ${insertResp.error!.message}");
         return;
       }
 
@@ -113,12 +111,10 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
       body: Column(
         children: [
           Expanded(
-            child: QRScanner(
+            child: QRView(
               key: qrKey,
-              formats: [BarcodeFormat.qrCode],
-              onScannerCreated: (ctrl) {
+              onQRViewCreated: (QRViewController ctrl) {
                 controller = ctrl;
-                controller!.start();
                 controller!.scannedDataStream.listen(_onScan);
               },
             ),
@@ -128,8 +124,8 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
               padding: const EdgeInsets.all(20),
               child: Text(
                 message!,
-                style: const TextStyle(fontSize: 16, color: Colors.green),
                 textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16, color: Colors.green),
               ),
             ),
         ],
