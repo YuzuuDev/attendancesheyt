@@ -22,7 +22,7 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
   }
 
   Future<void> _onScan(Barcode result) async {
-    if (scanned) return; // Prevent duplicate scans
+    if (scanned) return; // prevent duplicates
     scanned = true;
 
     final code = result.code;
@@ -33,7 +33,7 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
 
     final studentId = SupabaseClientInstance.supabase.auth.currentUser!.id;
 
-    // Parse QR code (format: classId-timestamp)
+    // Parse QR code: classId-timestamp
     final parts = code.split('-');
     if (parts.length != 2) {
       setState(() => message = "QR code format invalid");
@@ -50,6 +50,7 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
     final qrTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
     final now = DateTime.now();
 
+    // Determine attendance status
     String status;
     final diff = now.difference(qrTime).inMinutes;
     if (diff <= 15) {
@@ -61,7 +62,7 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
     }
 
     try {
-      // Get the latest session for this class
+      // Get latest session for this class
       final sessionResp = await SupabaseClientInstance.supabase
           .from('attendance_sessions')
           .select('id, end_time')
@@ -82,7 +83,7 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
         status = "absent";
       }
 
-      // Insert attendance record
+      // Insert attendance record (without execute)
       final insertResp = await SupabaseClientInstance.supabase
           .from('attendance_records')
           .insert({
@@ -90,11 +91,11 @@ class _StudentQRScanScreenState extends State<StudentQRScanScreen> {
             'student_id': studentId,
             'status': status,
           })
-          .execute();
+          .select()
+          .maybeSingle();
 
-      if (insertResp.error != null) {
-        setState(() => message =
-            "Already scanned or error: ${insertResp.error!.message}");
+      if (insertResp == null) {
+        setState(() => message = "Already scanned or duplicate");
         return;
       }
 
