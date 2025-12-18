@@ -14,12 +14,14 @@ class TeacherQRScreen extends StatefulWidget {
 }
 
 class _TeacherQRScreenState extends State<TeacherQRScreen> {
-  String? qrCode;
+  String? qrCodeString;
   String sessionId = '';
   DateTime? startTime;
   DateTime? endTime;
   List<Map<String, dynamic>> scannedStudents = [];
   Timer? timer;
+
+  QrCode? qrCode; // new QR object for qr_flutter 4.x
 
   @override
   void initState() {
@@ -35,8 +37,12 @@ class _TeacherQRScreenState extends State<TeacherQRScreen> {
 
   Future<void> _createSession() async {
     startTime = DateTime.now();
-    endTime = startTime!.add(const Duration(minutes: 15)); // 15 min on-time
-    qrCode = "${widget.classId}-${startTime!.millisecondsSinceEpoch}";
+    endTime = startTime!.add(const Duration(minutes: 15));
+    qrCodeString = "${widget.classId}-${startTime!.millisecondsSinceEpoch}";
+
+    qrCode = QrCode(4, QrErrorCorrectLevel.L); // 4 = version, L = low error correction
+    qrCode!.addData(qrCodeString!);
+    qrCode!.make();
 
     final response = await SupabaseClientInstance.supabase
         .from('attendance_sessions')
@@ -45,14 +51,13 @@ class _TeacherQRScreenState extends State<TeacherQRScreen> {
           'teacher_id': SupabaseClientInstance.supabase.auth.currentUser!.id,
           'start_time': startTime!.toIso8601String(),
           'end_time': endTime!.toIso8601String(),
-          'qr_code': qrCode,
+          'qr_code': qrCodeString,
         })
         .select('id')
         .maybeSingle();
 
     sessionId = response?['id'] ?? '';
 
-    // Start real-time refresh
     timer = Timer.periodic(const Duration(seconds: 5), (_) => _loadScannedStudents());
 
     setState(() {});
@@ -92,8 +97,7 @@ class _TeacherQRScreenState extends State<TeacherQRScreen> {
               Column(
                 children: [
                   QrImage(
-                    data: qrCode!,
-                    version: QrVersions.auto,
+                    qr: qrCode!, // ✅ use qr object
                     size: 250,
                   ),
                   const SizedBox(height: 10),
