@@ -153,16 +153,40 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                           child: ListTile(
                             title: Text(cls['name']),
                             subtitle: Text("Code: ${cls['code']}"),
-                            trailing: ElevatedButton(
-                              onPressed: () =>
-                                  _showStudents(cls['id'], cls['name']),
-                              child: const Text("Students"),
+                            // Replace trailing with Row of buttons
+                            trailing: SizedBox(
+                              width: 180, // adjust width to fit two buttons
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: () => _showStudents(cls['id'], cls['name']),
+                                    child: const Text("Students"),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => TeacherQRScreen(
+                                            classId: cls['id'],
+                                            className: cls['name'],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: const Text("Start Attendance"),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         );
                       },
                     ),
             ),
+
           ],
         ),
       ),
