@@ -36,9 +36,9 @@ class _TeacherQRScreenState extends State<TeacherQRScreen> {
   Future<void> _createSession() async {
     startTime = DateTime.now();
     endTime = startTime!.add(const Duration(minutes: 15));
-    qrCodeString = "${widget.classId}-${startTime!.millisecondsSinceEpoch}";
-
-    // Insert session into Supabase
+  
+    qrCodeString = "${widget.classId}|${startTime!.millisecondsSinceEpoch}";
+  
     final response = await SupabaseClientInstance.supabase
         .from('attendance_sessions')
         .insert({
@@ -50,12 +50,14 @@ class _TeacherQRScreenState extends State<TeacherQRScreen> {
         })
         .select('id')
         .maybeSingle();
-
+  
     sessionId = response?['id'] ?? '';
-
-    // Start timer to update scanned students
-    timer = Timer.periodic(const Duration(seconds: 5), (_) => _loadScannedStudents());
-
+  
+    timer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _loadScannedStudents(),
+    );
+  
     setState(() {});
   }
 
