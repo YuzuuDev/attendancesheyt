@@ -4,6 +4,7 @@ import '../../services/auth_service.dart';
 import '../../supabase_client.dart';
 import 'join_class_screen.dart';
 import '../login_screen.dart';
+import 'student_qr_scan_screen.dart';
 
 class StudentDashboard extends StatefulWidget {
   @override
@@ -81,7 +82,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: "Logout",
-            onPressed: _logout, // ✅ WORKING NOW
+            onPressed: _logout,
           ),
         ],
       ),
@@ -89,6 +90,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // **Join Class Button**
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green[300],
@@ -110,7 +112,33 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 ).then((_) => _loadClasses());
               },
             ),
+            const SizedBox(height: 10),
+
+            // **Scan Attendance QR Button**
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green[500],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                elevation: 5,
+              ),
+              icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
+              label: const Text(
+                "Scan Attendance QR",
+                style: TextStyle(color: Colors.white),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => StudentQRScanScreen()),
+                );
+              },
+            ),
             const SizedBox(height: 20),
+
+            // **List of joined classes**
             Expanded(
               child: classes.isEmpty
                   ? Center(
