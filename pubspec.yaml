@@ -14,6 +14,8 @@ dependencies:
    # QR Code generation
   qr_code_scanner_plus: ^2.0.14
 
+  qr_flutter: ^4.0.0
+
   # UUID for unique codes
   uuid: ^3.0.7
 
