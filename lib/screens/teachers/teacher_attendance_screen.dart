@@ -1,246 +1,210 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../services/class_service.dart';
+import '../../services/auth_service.dart';
 import '../../supabase_client.dart';
+import '../login_screen.dart';
+import 'create_class_screen.dart';
+import 'teacher_qr_screen.dart';
 
-class TeacherAttendanceScreen extends StatefulWidget {
-  final String classId;
-  final String className;
-
-  const TeacherAttendanceScreen({
-    required this.classId,
-    required this.className,
-    super.key,
-  });
-
+class TeacherDashboard extends StatefulWidget {
   @override
-  State<TeacherAttendanceScreen> createState() =>
-      _TeacherAttendanceScreenState();
+  State<TeacherDashboard> createState() => _TeacherDashboardState();
 }
 
-class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
-  String sessionId = '';
-  DateTime? endTime;
-  List<Map<String, dynamic>> scannedStudents = [];
-  Timer? timer;
+class _TeacherDashboardState extends State<TeacherDashboard> {
+  final ClassService classService = ClassService();
+  final AuthService authService = AuthService();
+  List<Map<String, dynamic>> classes = [];
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _initSession();
-    // Refresh every 1 second
-    timer = Timer.periodic(const Duration(seconds: 1), (_) => _loadAttendance());
+    _loadClasses();
   }
 
-  @override
-  void dispose() {
-    timer?.cancel();
-    super.dispose();
+  void _loadClasses() async {
+    final teacherId = SupabaseClientInstance.supabase.auth.currentUser!.id;
+    final result = await classService.getTeacherClasses(teacherId);
+    setState(() {
+      classes = result;
+      isLoading = false;
+    });
   }
 
-  Future<void> _initSession() async {
-    try {
-      // 1️⃣ Create new session if none exists in last 5 minutes
-      final latest = await SupabaseClientInstance.supabase
-          .from('attendance_sessions')
-          .select('id, start_time, end_time')
-          .eq('class_id', widget.classId)
-          .order('start_time', ascending: false)
-          .limit(1)
-          .maybeSingle();
+  void _logout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Log Out"),
+        content: const Text("Do you want to log out?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("No")),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Yes")),
+        ],
+      ),
+    );
 
-      DateTime now = DateTime.now().toUtc();
-
-      if (latest == null ||
-          now.isAfter(DateTime.parse(latest['end_time']))) {
-        final startTime = now;
-        endTime = startTime.add(const Duration(minutes: 5));
-
-        final qrCode = "${widget.classId}|${startTime.millisecondsSinceEpoch}";
-
-        final resp = await SupabaseClientInstance.supabase
-            .from('attendance_sessions')
-            .insert({
-              'class_id': widget.classId,
-              'teacher_id':
-                  SupabaseClientInstance.supabase.auth.currentUser!.id,
-              'start_time': startTime.toIso8601String(),
-              'end_time': endTime!.toIso8601String(),
-              'qr_code': qrCode,
-            })
-            .select('id')
-            .maybeSingle();
-
-        sessionId = resp?['id'] ?? '';
-      } else {
-        sessionId = latest['id'];
-        endTime = DateTime.parse(latest['end_time']);
-      }
-
-      await _loadAttendance();
-    } catch (e) {
-      debugPrint("Error initializing session: $e");
+    if (shouldLogout == true) {
+      await authService.signOut();
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => LoginScreen()));
     }
   }
 
-  Future<void> _loadAttendance() async {
-    if (sessionId.isEmpty) return;
-
-    try {
-      final records = await SupabaseClientInstance.supabase
-          .from('attendance_records')
-          .select('student_id, status, scanned_at, profiles(full_name)')
-          .eq('session_id', sessionId);
-
-      setState(() {
-        scannedStudents = List<Map<String, dynamic>>.from(records);
-      });
-    } catch (e) {
-      debugPrint("Error loading attendance: $e");
-    }
-  }
-
-  Map<String, int> _summarizeAttendance() {
-    int onTime = 0, late = 0, absent = 0;
-    for (var s in scannedStudents) {
-      switch (s['status']) {
-        case 'on_time':
-          onTime++;
-          break;
-        case 'late':
-          late++;
-          break;
-        case 'absent':
-          absent++;
-          break;
-      }
-    }
-    return {
-      'on_time': onTime,
-      'late': late,
-      'absent': absent,
-      'total': scannedStudents.length
-    };
-  }
-
-  String _countdown() {
-    if (endTime == null) return '';
-    final diff = endTime!.difference(DateTime.now().toUtc());
-    if (diff.isNegative) return "Session expired";
-    final minutes = diff.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = diff.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return "$minutes:$seconds";
-  }
-
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'on_time':
-        return Colors.green.shade200;
-      case 'late':
-        return Colors.yellow.shade200;
-      case 'absent':
-        return Colors.red.shade200;
-      default:
-        return Colors.grey.shade100;
-    }
-  }
-
-  Widget _buildSummaryItem(String title, int value, Color color) {
-    return Column(
-      children: [
-        Text(
-          value.toString(),
-          style: TextStyle(
-              fontSize: 18, fontWeight: FontWeight.bold, color: color),
+  void _showStudents(String classId, String className) async {
+    // Loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: SizedBox(
+          height: 80,
+          child: Center(child: CircularProgressIndicator()),
         ),
-        const SizedBox(height: 4),
-        Text(
-          title,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-      ],
+      ),
+    );
+
+    final students = await classService.getStudents(classId);
+    Navigator.pop(context); // close loading
+
+    // **Attendance popup with bubbly green design**
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          Timer? refreshTimer;
+          refreshTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+            final updatedStudents = await classService.getStudents(classId);
+            setStateDialog(() => students.clear()..addAll(updatedStudents));
+          });
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text("Students in $className"),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: students.isEmpty
+                  ? const Center(child: Text("No students enrolled"))
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: students.length,
+                      itemBuilder: (_, index) {
+                        final profile = students[index]['profiles'];
+                        return Card(
+                          color: Colors.green[100],
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          margin: const EdgeInsets.symmetric(vertical: 5),
+                          child: ListTile(
+                            title: Text(profile?['full_name'] ?? 'Unknown'),
+                            subtitle: Text(profile?['role'] ?? ''),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  refreshTimer?.cancel();
+                  Navigator.pop(context);
+                },
+                child: const Text("Close"),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final summary = _summarizeAttendance();
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
+      backgroundColor: Colors.green[50],
       appBar: AppBar(
-        title: Text("Attendance - ${widget.className}"),
-        backgroundColor: Colors.green.shade400,
+        title: const Text("Teacher Dashboard"),
+        backgroundColor: Colors.green[400],
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(25)),
+        ),
+        actions: [
+          IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
+        ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // ✅ Countdown
-            Card(
-              color: Colors.green.shade100,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildSummaryItem(
-                        "On-time", summary['on_time']!, Colors.green.shade600),
-                    _buildSummaryItem(
-                        "Late", summary['late']!, Colors.yellow.shade700),
-                    _buildSummaryItem(
-                        "Absent", summary['absent']!, Colors.red.shade400),
-                    _buildSummaryItem(
-                        "Total", summary['total']!, Colors.green.shade800),
-                  ],
-                ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green[300],
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
               ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => CreateClassScreen()),
+                ).then((_) => _loadClasses());
+              },
+              child: const Text("Create Class", style: TextStyle(color: Colors.white)),
             ),
-            const SizedBox(height: 12),
-            Text(
-              "Countdown: ${_countdown()}",
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green.shade900),
-            ),
-            const SizedBox(height: 12),
-
-            // ✅ Student list
+            const SizedBox(height: 20),
             Expanded(
-              child: scannedStudents.isEmpty
-                  ? Center(
-                      child: Text(
-                        "No students have scanned yet",
-                        style: TextStyle(
-                            color: Colors.green.shade900,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16),
-                      ),
-                    )
+              child: classes.isEmpty
+                  ? const Center(child: Text("No classes"))
                   : ListView.builder(
-                      itemCount: scannedStudents.length,
+                      itemCount: classes.length,
                       itemBuilder: (_, index) {
-                        final student = scannedStudents[index];
-                        final profile = student['profiles'];
-                        final status = student['status'] ?? 'unknown';
-
+                        final cls = classes[index];
                         return Card(
-                          color: _statusColor(status),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15)),
-                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          color: Colors.green[100],
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          margin: const EdgeInsets.symmetric(vertical: 8),
                           child: ListTile(
-                            title: Text(
-                              profile?['full_name'] ?? student['student_id'],
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle:
-                                Text(status.replaceAll('_', ' ').toUpperCase()),
-                            trailing: Text(
-                              student['scanned_at'] ?? '',
-                              style: const TextStyle(fontSize: 12),
+                            title: Text(cls['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text("Code: ${cls['code']}"),
+                            trailing: SizedBox(
+                              width: 180,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green[300],
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                    ),
+                                    onPressed: () => _showStudents(cls['id'], cls['name']),
+                                    child: const Text("Students"),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green[400],
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                    ),
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => TeacherQRScreen(
+                                            classId: cls['id'],
+                                            className: cls['name'],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: const Text("Start Attendance"),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         );
@@ -253,6 +217,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     );
   }
 }
+
 
 
 /*import 'dart:async';
