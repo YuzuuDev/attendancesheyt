@@ -67,13 +67,19 @@ class _TeacherAssignmentsScreenState extends State<TeacherAssignmentsScreen> {
                       child: ListTile(
                         title: Text(a['title']),
                         subtitle: Text(a['description'] ?? ''),
-                        trailing: Text(
-                          a['due_date'] != null
-                              ? DateTime.parse(a['due_date'])
-                                  .toLocal()
-                                  .toString()
-                                  .substring(0, 16)
-                              : 'No due date',
+                        trailing: IconButton(
+                          icon: const Icon(Icons.folder),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => AssignmentSubmissionsScreen(
+                                  assignmentId: a['id'],
+                                  title: a['title'],
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     );
