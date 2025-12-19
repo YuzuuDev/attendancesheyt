@@ -312,7 +312,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                           MaterialPageRoute(
                                             builder: (_) => TeacherAssignmentsScreen(
                                               classId: cls['id'],
-                                              className: cls['name'],
+                                              //className: cls['name'],
                                             ),
                                           ),
                                         );
