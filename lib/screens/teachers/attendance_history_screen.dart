@@ -28,30 +28,39 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
 
   Future<void> _loadHistory() async {
     final supabase = SupabaseClientInstance.supabase;
-
+  
     // 1️⃣ Get sessions
     final sessionRes = await supabase
         .from('attendance_sessions')
         .select('id, start_time, end_time')
         .eq('class_id', widget.classId)
         .order('start_time', ascending: false);
-
+  
+    if (sessionRes.isEmpty) {
+      setState(() {
+        sessions = [];
+        recordsBySession = {};
+        loading = false;
+      });
+      return;
+    }
+  
     // 2️⃣ Get records WITH profiles
+    final sessionIds = sessionRes.map((s) => s['id']).toList();
+    final sessionIdsStr = sessionIds.map((id) => "'$id'").join(',');
+  
     final recordRes = await supabase
         .from('attendance_records')
         .select('session_id, status, scanned_at, profiles(full_name)')
-        .in_(
-          'session_id',
-          sessionRes.map((s) => s['id']).toList(),
-        );
-
+        .filter('session_id', 'in', '($sessionIdsStr)'); // ✅ Correct syntax
+  
     // 3️⃣ Group records by session_id
     final Map<String, List<Map<String, dynamic>>> grouped = {};
     for (final r in recordRes) {
       grouped.putIfAbsent(r['session_id'], () => []);
       grouped[r['session_id']]!.add(r);
     }
-
+  
     setState(() {
       sessions = List<Map<String, dynamic>>.from(sessionRes);
       recordsBySession = grouped;
