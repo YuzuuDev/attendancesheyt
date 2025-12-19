@@ -5,6 +5,7 @@ import '../../supabase_client.dart';
 import '../login_screen.dart';
 import 'create_class_screen.dart';
 import 'teacher_qr_screen.dart';
+import 'attendance_history_screen.dart';
 
 class TeacherDashboard extends StatefulWidget {
   @override
@@ -289,7 +290,17 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                     ),
                                     const SizedBox(height: 6),
                                     ElevatedButton(
-                                      onPressed: () => _showAttendanceHistory(cls['id'], cls['name']),
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => AttendanceHistoryScreen(
+                                              classId: cls['id'],
+                                              className: cls['name'],
+                                            ),
+                                          ),
+                                        );
+                                      },
                                       child: const Text("Attendance History"),
                                     ),
                                   ],
