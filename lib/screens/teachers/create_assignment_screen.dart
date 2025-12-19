@@ -4,8 +4,9 @@ import '../../supabase_client.dart';
 
 class CreateAssignmentScreen extends StatefulWidget {
   final String classId;
+  final Map<String, dynamic>? assignment;
 
-  const CreateAssignmentScreen({required this.classId, super.key});
+  const CreateAssignmentScreen({required this.classId, this.assignment, super.key});
 
   @override
   State<CreateAssignmentScreen> createState() =>
