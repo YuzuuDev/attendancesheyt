@@ -52,15 +52,18 @@ class _StudentAssignmentsScreenState extends State<StudentAssignmentsScreen> {
                     title: Text(a['title']),
                     subtitle: Text(a['description'] ?? ''),
                     trailing: ElevatedButton(
-                      child: const Text("Submit"),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => SubmitAssignmentScreen(
-                              assignmentId: a['id'],
-                              title: a['title'],
-                            ),
+                            child: const Text("Submit / View"),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => SubmitAssignmentScreen(
+                                    assignmentId: a['id'],
+                                    title: a['title'],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         );
                       },
