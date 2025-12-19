@@ -5,6 +5,8 @@ import '../../supabase_client.dart';
 import 'join_class_screen.dart';
 import '../login_screen.dart';
 import 'student_qr_scan_screen.dart';
+import 'student_assignments_screen.dart';
+
 
 class StudentDashboard extends StatefulWidget {
   @override
@@ -163,6 +165,18 @@ class _StudentDashboardState extends State<StudentDashboard> {
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             subtitle: Text("Code: ${cls['code']}"),
+                            trailing: const Icon(Icons.assignment),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => StudentAssignmentsScreen(
+                                    classId: classes[index]['class_id'],
+                                    className: cls['name'],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         );
                       },
