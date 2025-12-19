@@ -6,6 +6,8 @@ import '../login_screen.dart';
 import 'create_class_screen.dart';
 import 'teacher_qr_screen.dart';
 import 'attendance_history_screen.dart';
+import 'teacher_assignments_screen.dart';
+
 
 class TeacherDashboard extends StatefulWidget {
   @override
@@ -302,6 +304,20 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                         );
                                       },
                                       child: const Text("Attendance History"),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => TeacherAssignmentsScreen(
+                                              classId: cls['id'],
+                                              className: cls['name'],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: const Text("Assignments"),
                                     ),
                                   ],
                                 ),
