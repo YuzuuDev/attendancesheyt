@@ -43,9 +43,57 @@ class AssignmentService {
     return List<Map<String, dynamic>>.from(res);
   }
   
-  
-  /// Student submits assignment
   Future<String?> submitAssignment({
+    required String assignmentId,
+    required String studentId,
+    required File file,
+  }) async {
+    try {
+      // 1️⃣ Check assignment due date
+      final assignment = await _supabase
+          .from('assignments')
+          .select('due_date')
+          .eq('id', assignmentId)
+          .maybeSingle();
+  
+      if (assignment == null) return "Assignment not found";
+  
+      final due = assignment['due_date'];
+      if (due != null &&
+          DateTime.now().isAfter(DateTime.parse(due))) {
+        return "Submission closed (past due date)";
+      }
+  
+      // 2️⃣ Upload file
+      final filePath =
+          '$assignmentId/$studentId-${DateTime.now().millisecondsSinceEpoch}';
+  
+      await _supabase.storage
+          .from('assignment_uploads')
+          .upload(filePath, file);
+  
+      final fileUrl = _supabase.storage
+          .from('assignment_uploads')
+          .getPublicUrl(filePath);
+  
+      // 3️⃣ Insert submission
+      await _supabase.from('assignment_submissions').insert({
+        'assignment_id': assignmentId,
+        'student_id': studentId,
+        'file_url': fileUrl,
+      });
+  
+      return null;
+    } catch (e) {
+      if (e.toString().contains('unique')) {
+        return "You already submitted this assignment";
+      }
+      return e.toString();
+    }
+  }
+
+  /// Student submits assignment
+  /*Future<String?> submitAssignment({
     required String assignmentId,
     required String studentId,
     required File file,
@@ -75,7 +123,7 @@ class AssignmentService {
     } catch (e) {
     return e.toString();
     }
-  }
+  }*/
   
   
   /// Teacher views submissions
