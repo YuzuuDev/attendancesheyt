@@ -146,4 +146,11 @@ class AssignmentService {
       'feedback': feedback,
     }).eq('id', submissionId);
   }
+  Future<void> deleteAssignment(String id) async {
+    await _supabase
+        .from('assignments')
+        .delete()
+        .eq('id', id);
+  }
+
 }
