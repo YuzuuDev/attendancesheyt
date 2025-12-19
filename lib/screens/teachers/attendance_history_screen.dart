@@ -20,13 +20,6 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   bool isLoading = true;
   String? error;
 
-  /// FINAL HISTORY STRUCTURE:
-  /// [
-  ///   {
-  ///     session: {...},
-  ///     records: [...]
-  ///   }
-  /// ]
   List<Map<String, dynamic>> history = [];
 
   @override
@@ -42,7 +35,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     });
 
     try {
-      /// 1️⃣ GET ALL SESSIONS FOR THIS CLASS
+      /// 1️⃣ GET ALL SESSIONS
       final sessions = await SupabaseClientInstance.supabase
           .from('attendance_sessions')
           .select('id, start_time, end_time')
@@ -51,16 +44,32 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
 
       List<Map<String, dynamic>> temp = [];
 
-      /// 2️⃣ FOR EACH SESSION → GET WHO ATTENDED
+      /// 2️⃣ FOR EACH SESSION → GET ATTENDANCE
       for (final session in sessions) {
         final records = await SupabaseClientInstance.supabase
             .from('attendance_records')
-            .select('status, scanned_at, profiles(full_name)')
+            .select('student_id, status, scanned_at')
             .eq('session_id', session['id']);
+
+        /// 3️⃣ MANUALLY FETCH PROFILES
+        List<Map<String, dynamic>> enriched = [];
+
+        for (final record in records) {
+          final profile = await SupabaseClientInstance.supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', record['student_id'])
+              .maybeSingle();
+
+          enriched.add({
+            ...record,
+            'profile': profile,
+          });
+        }
 
         temp.add({
           'session': session,
-          'records': records,
+          'records': enriched,
         });
       }
 
@@ -78,13 +87,13 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     }
   }
 
-  String _formatDateTime(String iso) {
+  String _format(String iso) {
     final dt = DateTime.parse(iso).toLocal();
     return "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} "
         "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
   }
 
-  Color _statusColor(String status) {
+  Color _color(String status) {
     switch (status) {
       case 'on_time':
         return Colors.green.shade100;
@@ -109,7 +118,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
           : error != null
               ? Center(child: Text(error!))
               : history.isEmpty
-                  ? const Center(child: Text("No attendance history found"))
+                  ? const Center(child: Text("No attendance history"))
                   : ListView.builder(
                       itemCount: history.length,
                       itemBuilder: (_, index) {
@@ -119,41 +128,37 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                                 history[index]['records']);
 
                         return Card(
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                          margin: const EdgeInsets.all(12),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(15)),
                           child: ExpansionTile(
                             title: Text(
-                              "Session: ${_formatDateTime(session['start_time'])}",
+                              "Session: ${_format(session['start_time'])}",
                               style:
                                   const TextStyle(fontWeight: FontWeight.bold),
                             ),
-                            subtitle: Text(
-                              "Ended: ${_formatDateTime(session['end_time'])}",
-                            ),
+                            subtitle:
+                                Text("Ended: ${_format(session['end_time'])}"),
                             children: records.isEmpty
                                 ? const [
                                     Padding(
                                       padding: EdgeInsets.all(16),
-                                      child: Text(
-                                          "No students scanned for this session"),
+                                      child:
+                                          Text("No students scanned"),
                                     )
                                   ]
                                 : records.map((r) {
-                                    final profile = r['profiles'];
-                                    final status = r['status'] ?? 'unknown';
-                                    final scannedAt =
-                                        r['scanned_at'] ?? '';
+                                    final profile = r['profile'];
+                                    final status = r['status'];
 
                                     return Card(
-                                      color: _statusColor(status),
+                                      color: _color(status),
                                       margin: const EdgeInsets.symmetric(
                                           horizontal: 16, vertical: 4),
                                       child: ListTile(
                                         title: Text(
                                           profile?['full_name'] ??
-                                              'Unknown Student',
+                                              r['student_id'],
                                           style: const TextStyle(
                                               fontWeight: FontWeight.bold),
                                         ),
@@ -163,8 +168,8 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                                               .toUpperCase(),
                                         ),
                                         trailing: Text(
-                                          scannedAt != ''
-                                              ? DateTime.parse(scannedAt)
+                                          r['scanned_at'] != null
+                                              ? DateTime.parse(r['scanned_at'])
                                                   .toLocal()
                                                   .toIso8601String()
                                                   .substring(11, 19)
@@ -182,6 +187,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     );
   }
 }
+
 
 /*import 'package:flutter/material.dart';
 import '../../supabase_client.dart';
