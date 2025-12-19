@@ -89,4 +89,28 @@ class AttendanceService {
 
     return List<Map<String, dynamic>>.from(response);
   }
+  /// Fetch attendance history for a class
+  Future<List<Map<String, dynamic>>> getAttendanceHistory(String classId) async {
+    final sessions = await _supabase
+        .from('attendance_sessions')
+        .select('id, start_time')
+        .eq('class_id', classId)
+        .order('start_time', ascending: false);
+
+    List<Map<String, dynamic>> history = [];
+
+    for (var session in sessions) {
+      final records = await _supabase
+          .from('attendance_records')
+          .select('student_id, status, scanned_at, profiles(full_name)')
+          .eq('session_id', session['id']);
+
+      history.add({
+        'session_date': session['start_time'],
+        'records': records,
+      });
+    }
+
+    return history;
+  }
 }
