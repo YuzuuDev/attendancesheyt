@@ -1,6 +1,151 @@
 import 'package:flutter/material.dart';
 import '../../supabase_client.dart';
 
+class TeacherAttendanceHistoryScreen extends StatefulWidget {
+  final String classId;
+  final String className;
+
+  const TeacherAttendanceHistoryScreen({
+    required this.classId,
+    required this.className,
+    super.key,
+  });
+
+  @override
+  State<TeacherAttendanceHistoryScreen> createState() =>
+      _TeacherAttendanceHistoryScreenState();
+}
+
+class _TeacherAttendanceHistoryScreenState
+    extends State<TeacherAttendanceHistoryScreen> {
+  bool isLoading = true;
+  List<Map<String, dynamic>> sessions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    setState(() => isLoading = true);
+
+    try {
+      // 1️⃣ Get all sessions for the class
+      final sessionResp = await SupabaseClientInstance.supabase
+          .from('attendance_sessions')
+          .select('id, start_time, end_time')
+          .eq('class_id', widget.classId)
+          .order('start_time', ascending: false);
+
+      final List<Map<String, dynamic>> fetchedSessions =
+          List<Map<String, dynamic>>.from(sessionResp);
+
+      // 2️⃣ For each session, get attendance records
+      List<Map<String, dynamic>> sessionWithStudents = [];
+
+      for (var session in fetchedSessions) {
+        final recordsResp = await SupabaseClientInstance.supabase
+            .from('attendance_records')
+            .select('status, scanned_at, profiles(full_name)')
+            .eq('session_id', session['id'])
+            .order('scanned_at', ascending: true);
+
+        final List<Map<String, dynamic>> records =
+            List<Map<String, dynamic>>.from(recordsResp);
+
+        sessionWithStudents.add({
+          'session': session,
+          'records': records,
+        });
+      }
+
+      setState(() {
+        sessions = sessionWithStudents;
+        isLoading = false;
+      });
+    } catch (e) {
+      debugPrint("Error loading attendance history: $e");
+      setState(() => isLoading = false);
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'on_time':
+        return Colors.green.shade200;
+      case 'late':
+        return Colors.yellow.shade200;
+      case 'absent':
+        return Colors.red.shade200;
+      default:
+        return Colors.grey.shade100;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Attendance History - ${widget.className}"),
+        backgroundColor: Colors.green.shade400,
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : sessions.isEmpty
+              ? Center(
+                  child: Text(
+                    "No attendance history yet",
+                    style: TextStyle(
+                        color: Colors.green.shade900,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16),
+                  ),
+                )
+              : ListView.builder(
+                  itemCount: sessions.length,
+                  itemBuilder: (_, index) {
+                    final session = sessions[index]['session'];
+                    final records = sessions[index]['records'] as List;
+
+                    return Card(
+                      margin: const EdgeInsets.all(12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15)),
+                      child: ExpansionTile(
+                        title: Text(
+                            "Session: ${DateTime.parse(session['start_time']).toLocal()}"),
+                        subtitle: Text(
+                            "End: ${DateTime.parse(session['end_time']).toLocal()}"),
+                        children: records.isEmpty
+                            ? [
+                                Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Text("No students attended this session"),
+                                )
+                              ]
+                            : records.map<Widget>((student) {
+                                final profile = student['profiles'];
+                                return ListTile(
+                                  title: Text(profile?['full_name'] ??
+                                      student['student_id']),
+                                  subtitle: Text(
+                                      student['status'].replaceAll('_', ' ').toUpperCase()),
+                                  trailing: Text(student['scanned_at'] ?? ''),
+                                  tileColor: _statusColor(student['status']),
+                                );
+                              }).toList(),
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+}
+
+/*import 'package:flutter/material.dart';
+import '../../supabase_client.dart';
+
 class AttendanceHistoryScreen extends StatefulWidget {
   final String classId;
   final String className;
@@ -181,135 +326,6 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                         );
                       },
                     ),
-    );
-  }
-}
-
-/*import 'package:flutter/material.dart';
-import '../../supabase_client.dart';
-
-class AttendanceHistoryScreen extends StatefulWidget {
-  final String classId;
-  final String className;
-
-  const AttendanceHistoryScreen({
-    required this.classId,
-    required this.className,
-    super.key,
-  });
-
-  @override
-  State<AttendanceHistoryScreen> createState() => _AttendanceHistoryScreenState();
-}
-
-class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
-  bool loading = true;
-  List<Map<String, dynamic>> sessions = [];
-  Map<String, List<Map<String, dynamic>>> recordsBySession = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _loadHistory();
-  }
-
-  Future<void> _loadHistory() async {
-    final supabase = SupabaseClientInstance.supabase;
-  
-    // 1️⃣ Get sessions
-    final sessionRes = await supabase
-        .from('attendance_sessions')
-        .select('id, start_time, end_time')
-        .eq('class_id', widget.classId)
-        .order('start_time', ascending: false);
-  
-    if (sessionRes.isEmpty) {
-      setState(() {
-        sessions = [];
-        recordsBySession = {};
-        loading = false;
-      });
-      return;
-    }
-  
-    // 2️⃣ Get records WITH profiles
-    final sessionIds = sessionRes.map((s) => s['id']).toList();
-    final sessionIdsStr = sessionIds.map((id) => "'$id'").join(',');
-  
-    final recordRes = await supabase
-        .from('attendance_records')
-        .select('session_id, status, scanned_at, profiles(full_name)')
-        .filter('session_id', 'in', '($sessionIdsStr)'); // ✅ Correct syntax
-  
-    // 3️⃣ Group records by session_id
-    final Map<String, List<Map<String, dynamic>>> grouped = {};
-    for (final r in recordRes) {
-      grouped.putIfAbsent(r['session_id'], () => []);
-      grouped[r['session_id']]!.add(r);
-    }
-  
-    setState(() {
-      sessions = List<Map<String, dynamic>>.from(sessionRes);
-      recordsBySession = grouped;
-      loading = false;
-    });
-  }
-
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Attendance – ${widget.className}"),
-      ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : sessions.isEmpty
-              ? const Center(child: Text("No attendance history"))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: sessions.length,
-                  itemBuilder: (_, index) {
-                    final s = sessions[index];
-                    final start = DateTime.parse(s['start_time']).toLocal();
-                    final records = recordsBySession[s['id']] ?? [];
-
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ExpansionTile(
-                        title: Text(
-                          "${start.year}-${start.month}-${start.day}",
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text("${records.length} attended"),
-                        children: records.isEmpty
-                            ? [
-                                const ListTile(
-                                  title: Text("No scans"),
-                                )
-                              ]
-                            : records.map((r) {
-                                final name =
-                                    r['profiles']?['full_name'] ?? 'Unknown';
-                                final status = r['status'];
-
-                                Color color = Colors.grey.shade200;
-                                if (status == 'on_time') color = Colors.green.shade200;
-                                if (status == 'late') color = Colors.orange.shade200;
-                                if (status == 'absent') color = Colors.red.shade200;
-
-                                return Container(
-                                  color: color,
-                                  child: ListTile(
-                                    title: Text(name),
-                                    subtitle: Text(status.toUpperCase()),
-                                  ),
-                                );
-                              }).toList(),
-                      ),
-                    );
-                  },
-                ),
     );
   }
 }*/
