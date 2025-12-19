@@ -4,11 +4,9 @@ import 'submit_assignment_screen.dart';
 
 class StudentAssignmentsScreen extends StatefulWidget {
   final String classId;
-  final String className;
 
   const StudentAssignmentsScreen({
     required this.classId,
-    required this.className,
     super.key,
   });
 
@@ -17,10 +15,11 @@ class StudentAssignmentsScreen extends StatefulWidget {
       _StudentAssignmentsScreenState();
 }
 
-class _StudentAssignmentsScreenState extends State<StudentAssignmentsScreen> {
-  final AssignmentService assignmentService = AssignmentService();
-  bool loading = true;
+class _StudentAssignmentsScreenState
+    extends State<StudentAssignmentsScreen> {
+  final AssignmentService service = AssignmentService();
   List<Map<String, dynamic>> assignments = [];
+  bool loading = true;
 
   @override
   void initState() {
@@ -29,7 +28,7 @@ class _StudentAssignmentsScreenState extends State<StudentAssignmentsScreen> {
   }
 
   Future<void> _load() async {
-    final res = await assignmentService.getAssignments(widget.classId);
+    final res = await service.getAssignments(widget.classId);
     setState(() {
       assignments = res;
       loading = false;
@@ -39,39 +38,41 @@ class _StudentAssignmentsScreenState extends State<StudentAssignmentsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.className)),
+      appBar: AppBar(title: const Text("Assignments")),
       body: loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: assignments.length,
-              itemBuilder: (_, i) {
-                final a = assignments[i];
-                return Card(
-                  margin: const EdgeInsets.all(10),
-                  child: ListTile(
-                    title: Text(a['title']),
-                    subtitle: Text(a['description'] ?? ''),
-                    trailing: ElevatedButton(
-                            child: const Text("Submit / View"),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => SubmitAssignmentScreen(
-                                    assignmentId: a['id'],
-                                    title: a['title'],
-                                  ),
+          : assignments.isEmpty
+              ? const Center(child: Text("No assignments"))
+              : ListView.builder(
+                  itemCount: assignments.length,
+                  itemBuilder: (_, i) {
+                    final a = assignments[i];
+
+                    return Card(
+                      margin: const EdgeInsets.all(10),
+                      child: ListTile(
+                        title: Text(a['title']),
+                        subtitle:
+                            Text(a['description'] ?? ''),
+                        trailing: ElevatedButton(
+                          child: const Text("Submit"),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    SubmitAssignmentScreen(
+                                  assignmentId: a['id'],
+                                  title: a['title'],
                                 ),
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }
