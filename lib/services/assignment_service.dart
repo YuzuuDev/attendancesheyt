@@ -136,4 +136,14 @@ class AssignmentService {
     
     return List<Map<String, dynamic>>.from(res);
   }
+  Future<void> gradeSubmission({
+    required String submissionId,
+    required int grade,
+    required String feedback,
+  }) async {
+    await _supabase.from('assignment_submissions').update({
+      'grade': grade,
+      'feedback': feedback,
+    }).eq('id', submissionId);
+  }
 }
