@@ -1,75 +1,37 @@
 import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-
 class AssignmentService {
   final SupabaseClient _supabase = Supabase.instance.client;
-  
-  
-  /// Teacher creates assignment
-  Future<String?> createAssignment({
-    required String classId,
-    required String teacherId,
-    required String title,
-    String? description,
-    DateTime? dueDate,
-    int maxPoints = 100,
-    }) async {
-    try {
-    await _supabase.from('assignments').insert({
-    'class_id': classId,
-    'teacher_id': teacherId,
-    'title': title,
-    'description': description,
-    'due_date': dueDate?.toIso8601String(),
-    'max_points': maxPoints,
-    });
-    return null;
-    } catch (e) {
-    return e.toString();
-    }
-  }
-  
-  
-  /// Fetch assignments for a class
-  Future<List<Map<String, dynamic>>> getAssignments(String classId) async {
-    final res = await _supabase
-    .from('assignments')
-    .select('*')
-    .eq('class_id', classId)
-    .order('created_at', ascending: false);
-    
-    
-    return List<Map<String, dynamic>>.from(res);
-  }
+
   Future<void> submitAssignment({
     required String assignmentId,
     required String filePath,
   }) async {
-    final supabase = SupabaseClientInstance.supabase;
-    final user = supabase.auth.currentUser!;
+    final user = _supabase.auth.currentUser!;
     final userId = user.id;
-  
+
     final fileName = filePath.split('/').last;
     final storagePath = '$userId/$assignmentId/$fileName';
-  
+
     // 1️⃣ Upload file
-    await supabase.storage
+    await _supabase.storage
         .from('assignments')
         .upload(storagePath, File(filePath));
-  
-    // 2️⃣ Get file URL
-    final fileUrl = supabase.storage
+
+    // 2️⃣ Get public URL
+    final fileUrl = _supabase.storage
         .from('assignments')
         .getPublicUrl(storagePath);
-  
-    // 3️⃣ INSERT submission row (THIS IS THE FIX)
-    await supabase.from('assignment_submissions').insert({
+
+    // 3️⃣ Insert DB row (THIS is what the teacher reads)
+    await _supabase.from('assignment_submissions').insert({
       'assignment_id': assignmentId,
       'student_id': userId,
       'file_url': fileUrl,
     });
   }
+}
 
   /*Future<String?> submitAssignment({
     required String assignmentId,
