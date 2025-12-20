@@ -43,14 +43,15 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
             itemCount: submissions.length,
             itemBuilder: (_, i) {
               final s = submissions[i];
-              final profile = s['profiles'];
+              final profile = s['profile'];
 
               return Card(
                 margin:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 child: ListTile(
                   title: Text(
-                      profile?['full_name'] ?? s['student_id']),
+                    profile?['full_name'] ?? s['student_id'],
+                  ),
                   subtitle: Text(
                     s['submitted_at'] != null
                         ? DateTime.parse(s['submitted_at'])
@@ -73,6 +74,7 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
     );
   }
 }
+
 
 /*import 'package:flutter/material.dart';
 import '../../services/assignment_service.dart';
