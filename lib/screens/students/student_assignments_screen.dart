@@ -1,78 +1,72 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../services/assignment_service.dart';
-import 'submit_assignment_screen.dart';
 
-class StudentAssignmentsScreen extends StatefulWidget {
-  final String classId;
+class SubmitAssignmentScreen extends StatefulWidget {
+  final String assignmentId;
+  final String title;
 
-  const StudentAssignmentsScreen({
-    required this.classId,
+  const SubmitAssignmentScreen({
+    required this.assignmentId,
+    required this.title,
     super.key,
   });
 
   @override
-  State<StudentAssignmentsScreen> createState() =>
-      _StudentAssignmentsScreenState();
+  State<SubmitAssignmentScreen> createState() =>
+      _SubmitAssignmentScreenState();
 }
 
-class _StudentAssignmentsScreenState
-    extends State<StudentAssignmentsScreen> {
+class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
   final AssignmentService service = AssignmentService();
-  List<Map<String, dynamic>> assignments = [];
-  bool loading = true;
+  File? file;
+  bool loading = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _load();
+  Future<void> _pickFile() async {
+    final res = await FilePicker.platform.pickFiles();
+    if (res != null) {
+      setState(() => file = File(res.files.single.path!));
+    }
   }
 
-  Future<void> _load() async {
-    final res = await service.getAssignments(widget.classId);
-    setState(() {
-      assignments = res;
-      loading = false;
-    });
+  Future<void> _submit() async {
+    if (file == null) return;
+
+    setState(() => loading = true);
+    await service.submitAssignment(
+      assignmentId: widget.assignmentId,
+      file: file!,
+    );
+    setState(() => loading = false);
+
+    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Assignments")),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : assignments.isEmpty
-              ? const Center(child: Text("No assignments"))
-              : ListView.builder(
-                  itemCount: assignments.length,
-                  itemBuilder: (_, i) {
-                    final a = assignments[i];
-
-                    return Card(
-                      margin: const EdgeInsets.all(10),
-                      child: ListTile(
-                        title: Text(a['title']),
-                        subtitle:
-                            Text(a['description'] ?? ''),
-                        trailing: ElevatedButton(
-                          child: const Text("Submit"),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    SubmitAssignmentScreen(
-                                  assignmentId: a['id'],
-                                  title: a['title'],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                ),
+      appBar: AppBar(title: Text(widget.title)),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            ElevatedButton(
+              onPressed: _pickFile,
+              child: const Text("Pick File"),
+            ),
+            if (file != null)
+              Text(file!.path.split('/').last),
+            const SizedBox(height: 20),
+            loading
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+                    onPressed: _submit,
+                    child: const Text("Submit"),
+                  ),
+          ],
+        ),
+      ),
     );
   }
 }
