@@ -75,6 +75,49 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                       }
                     },
                   ),
+                  // 👇 THIS IS THE FUCKING PART YOU ASKED FOR
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) {
+                        final gradeCtrl = TextEditingController();
+                        final feedbackCtrl = TextEditingController();
+              
+                        return AlertDialog(
+                          title: const Text("Grade Submission"),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextField(
+                                controller: gradeCtrl,
+                                keyboardType: TextInputType.number,
+                                decoration:
+                                    const InputDecoration(labelText: "Grade"),
+                              ),
+                              TextField(
+                                controller: feedbackCtrl,
+                                decoration:
+                                    const InputDecoration(labelText: "Feedback"),
+                              ),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () async {
+                                await service.gradeSubmission(
+                                  submissionId: s['id'],
+                                  grade: int.parse(gradeCtrl.text),
+                                  feedback: feedbackCtrl.text,
+                                );
+                                Navigator.pop(context);
+                              },
+                              child: const Text("Save"),
+                            )
+                          ],
+                        );
+                      },
+                    );
+                  },
                 ),
               );
             },
