@@ -34,5 +34,8 @@ class ParticipationService {
         .select('participation_points')
         .eq('id', studentId)
         .maybeSingle();
+  
+    return res?['participation_points'] ?? 0;
   }
+
 }
