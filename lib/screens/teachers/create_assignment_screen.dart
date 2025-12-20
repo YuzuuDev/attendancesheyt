@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../services/assignment_service.dart';
-import '../../supabase_client.dart';
 
 class CreateAssignmentScreen extends StatefulWidget {
   final String classId;
@@ -25,25 +24,15 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
   Future<void> _create() async {
     setState(() => loading = true);
 
-    final teacherId =
-        SupabaseClientInstance.supabase.auth.currentUser!.id;
-
-    final err = await service.createAssignment(
+    await service.createAssignment(
       classId: widget.classId,
-      teacherId: teacherId,
       title: titleCtrl.text,
       description: descCtrl.text,
       dueDate: dueDate,
     );
 
     setState(() => loading = false);
-
-    if (err == null) {
-      Navigator.pop(context);
-    } else {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(err)));
-    }
+    Navigator.pop(context);
   }
 
   @override
@@ -79,7 +68,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                 ? const CircularProgressIndicator()
                 : ElevatedButton(
                     onPressed: _create,
-                    child: const Text("Create Assignment"),
+                    child: const Text("Create"),
                   ),
           ],
         ),
