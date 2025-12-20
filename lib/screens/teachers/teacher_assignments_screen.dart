@@ -18,7 +18,7 @@ class TeacherAssignmentsScreen extends StatefulWidget {
 
 class _TeacherAssignmentsScreenState
     extends State<TeacherAssignmentsScreen> {
-  final AssignmentService assignmentService = AssignmentService();
+  final AssignmentService service = AssignmentService();
   List<Map<String, dynamic>> assignments = [];
   bool loading = true;
 
@@ -29,25 +29,14 @@ class _TeacherAssignmentsScreenState
   }
 
   Future<void> _load() async {
-    final res =
-        await assignmentService.getAssignments(widget.classId);
-    setState(() {
-      assignments = res;
-      loading = false;
-    });
-  }
-
-  Future<void> _delete(String id) async {
-    await assignmentService.deleteAssignment(id);
-    _load();
+    assignments = await service.getAssignments(widget.classId);
+    setState(() => loading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Assignments"),
-      ),
+      appBar: AppBar(title: const Text("Assignments")),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
         onPressed: () async {
@@ -68,51 +57,23 @@ class _TeacherAssignmentsScreenState
               itemBuilder: (_, i) {
                 final a = assignments[i];
 
-                return Card(
-                  margin: const EdgeInsets.all(10),
-                  child: ListTile(
-                    title: Text(a['title']),
-                    subtitle:
-                        Text(a['description'] ?? ''),
-                    onTap: () async {
-                      // EDIT assignment
-                      await Navigator.push(
+                return ListTile(
+                  title: Text(a['title']),
+                  subtitle: Text(a['description'] ?? ''),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.folder),
+                    onPressed: () {
+                      Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) =>
-                              CreateAssignmentScreen(
-                            classId: widget.classId,
-                            assignment: a,
+                              AssignmentSubmissionsScreen(
+                            assignmentId: a['id'],
+                            title: a['title'],
                           ),
                         ),
                       );
-                      _load();
                     },
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon:
-                              const Icon(Icons.folder),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    AssignmentSubmissionsScreen(
-                                  assignmentId: a['id'],
-                                  title: a['title'],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _delete(a['id']),
-                        ),
-                      ],
-                    ),
                   ),
                 );
               },
