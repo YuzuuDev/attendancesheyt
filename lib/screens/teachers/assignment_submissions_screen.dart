@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/assignment_service.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 
 class AssignmentSubmissionsScreen extends StatelessWidget {
   final String assignmentId;
@@ -61,8 +63,16 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                   ),
                   trailing: IconButton(
                     icon: const Icon(Icons.open_in_new),
-                    onPressed: () {
-                      // open s['file_url']
+                    onPressed: () async {
+                      final url = s['file_url'];
+                      if (url != null) {
+                        final uri = Uri.parse(url);
+                        if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Could not open file")),
+                          );
+                        }
+                      }
                     },
                   ),
                 ),
