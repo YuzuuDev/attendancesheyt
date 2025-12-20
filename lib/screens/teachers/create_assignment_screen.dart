@@ -4,9 +4,11 @@ import '../../supabase_client.dart';
 
 class CreateAssignmentScreen extends StatefulWidget {
   final String classId;
-  final Map<String, dynamic>? assignment;
 
-  const CreateAssignmentScreen({required this.classId, this.assignment, super.key});
+  const CreateAssignmentScreen({
+    required this.classId,
+    super.key,
+  });
 
   @override
   State<CreateAssignmentScreen> createState() =>
@@ -14,24 +16,28 @@ class CreateAssignmentScreen extends StatefulWidget {
 }
 
 class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
-  final AssignmentService assignmentService = AssignmentService();
+  final AssignmentService service = AssignmentService();
   final titleCtrl = TextEditingController();
   final descCtrl = TextEditingController();
   DateTime? dueDate;
   bool loading = false;
 
-  void _create() async {
+  Future<void> _create() async {
     setState(() => loading = true);
-  
-    final err = await assignmentService.createAssignment(
+
+    final teacherId =
+        SupabaseClientInstance.supabase.auth.currentUser!.id;
+
+    final err = await service.createAssignment(
       classId: widget.classId,
+      teacherId: teacherId,
       title: titleCtrl.text,
       description: descCtrl.text,
       dueDate: dueDate,
     );
-  
+
     setState(() => loading = false);
-  
+
     if (err == null) {
       Navigator.pop(context);
     } else {
@@ -58,7 +64,6 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
             ),
             const SizedBox(height: 10),
             ElevatedButton(
-              child: const Text("Pick Due Date"),
               onPressed: () async {
                 final d = await showDatePicker(
                   context: context,
@@ -67,6 +72,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                 );
                 if (d != null) setState(() => dueDate = d);
               },
+              child: const Text("Pick Due Date"),
             ),
             const SizedBox(height: 20),
             loading
