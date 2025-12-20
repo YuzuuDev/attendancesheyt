@@ -40,7 +40,7 @@ class AssignmentService {
   }
 
   /* ===============================
-     SUBMISSIONS — THIS IS THE FIX
+     SUBMISSIONS — FIXED FOR REAL
      =============================== */
 
   Future<String?> submitAssignment({
@@ -72,25 +72,35 @@ class AssignmentService {
     }
   }
 
+  /// 🚨 THIS IS THE IMPORTANT PART
+  /// NO JOIN. MANUAL PROFILE FETCH.
   Future<List<Map<String, dynamic>>> getSubmissions(
       String assignmentId) async {
-    final res = await _supabase
+    final submissions = await _supabase
         .from('assignment_submissions')
-        .select('''
-          id,
-          file_url,
-          submitted_at,
-          student_id,
-          profiles (
-            full_name
-          )
-        ''')
+        .select('id, file_url, submitted_at, student_id')
         .eq('assignment_id', assignmentId)
         .order('submitted_at', ascending: false);
 
-    return List<Map<String, dynamic>>.from(res);
+    final List<Map<String, dynamic>> result =
+        List<Map<String, dynamic>>.from(submissions);
+
+    for (int i = 0; i < result.length; i++) {
+      final studentId = result[i]['student_id'];
+
+      final profile = await _supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', studentId)
+          .maybeSingle();
+
+      result[i]['profile'] = profile;
+    }
+
+    return result;
   }
 }
+
 
 /*import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
