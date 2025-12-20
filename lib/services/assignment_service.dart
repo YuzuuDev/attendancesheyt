@@ -49,24 +49,42 @@ class AssignmentService {
   }) async {
     try {
       final userId = _supabase.auth.currentUser!.id;
-
+  
+      /// 🔒 STEP 1: CHECK IF ASSIGNMENT IS LOCKED
+      final assignment = await _supabase
+          .from('assignments')
+          .select('is_locked')
+          .eq('id', assignmentId)
+          .single();
+  
+      if (assignment['is_locked'] == true) {
+        return "Submissions are closed";
+      }
+  
+      /// 📁 STEP 2: UPLOAD FILE
       final fileName = file.path.split('/').last;
       final path = '$userId/$assignmentId/$fileName';
-
+  
       await _supabase.storage
           .from('assignment_uploads')
-          .upload(path, file, fileOptions: const FileOptions(upsert: true));
-
+          .upload(
+            path,
+            file,
+            fileOptions: const FileOptions(upsert: true),
+          );
+  
+      /// 🌐 STEP 3: GET PUBLIC URL
       final fileUrl =
           _supabase.storage.from('assignment_uploads').getPublicUrl(path);
-
-      await _supabase.from('assignment_submissions').insert({
+  
+      /// 📝 STEP 4: INSERT / UPDATE SUBMISSION
+      await _supabase.from('assignment_submissions').upsert({
         'assignment_id': assignmentId,
         'student_id': userId,
         'file_url': fileUrl,
       });
-
-      return null;
+  
+      return null; // success
     } catch (e) {
       return e.toString();
     }
@@ -109,4 +127,32 @@ class AssignmentService {
         .eq('student_id', userId)
         .maybeSingle();
   }
+  Future<void> updateAssignment({
+    required String assignmentId,
+    String? title,
+    String? description,
+    DateTime? dueDate,
+    int? maxPoints,
+    bool? isLocked,
+  }) async {
+    await _supabase.from('assignments').update({
+      if (title != null) 'title': title,
+      if (description != null) 'description': description,
+      if (dueDate != null) 'due_date': dueDate.toIso8601String(),
+      if (maxPoints != null) 'max_points': maxPoints,
+      if (isLocked != null) 'is_locked': isLocked,
+    }).eq('id', assignmentId);
+  }
+  Future<void> gradeSubmission({
+    required String submissionId,
+    required int grade,
+    String? feedback,
+  }) async {
+    await _supabase.from('assignment_submissions').update({
+      'grade': grade,
+      'feedback': feedback,
+    }).eq('id', submissionId);
+  }
+
+
 }
