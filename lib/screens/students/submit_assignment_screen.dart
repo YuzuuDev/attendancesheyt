@@ -33,20 +33,16 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
 
   Future<void> _submit() async {
     if (file == null) return;
-
+  
     setState(() => loading = true);
-
-    final studentId =
-        SupabaseClientInstance.supabase.auth.currentUser!.id;
-
+  
     final err = await assignmentService.submitAssignment(
       assignmentId: widget.assignmentId,
-      //studentId: studentId,
       file: file!,
     );
-
+  
     setState(() => loading = false);
-
+  
     if (err == null) {
       Navigator.pop(context);
     } else {
