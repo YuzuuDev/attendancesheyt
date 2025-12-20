@@ -99,4 +99,14 @@ class AssignmentService {
 
     return result;
   }
+  Future<Map<String, dynamic>?> getMySubmission(String assignmentId) async {
+    final userId = _supabase.auth.currentUser!.id;
+  
+    return await _supabase
+        .from('assignment_submissions')
+        .select('id, file_url, submitted_at, grade, feedback')
+        .eq('assignment_id', assignmentId)
+        .eq('student_id', userId)
+        .maybeSingle();
+  }
 }
