@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../services/assignment_service.dart';
-import '../../supabase_client.dart';
 
 class SubmitAssignmentScreen extends StatefulWidget {
   final String assignmentId;
@@ -20,7 +19,7 @@ class SubmitAssignmentScreen extends StatefulWidget {
 }
 
 class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
-  final AssignmentService assignmentService = AssignmentService();
+  final AssignmentService service = AssignmentService();
   File? file;
   bool loading = false;
 
@@ -33,16 +32,16 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
 
   Future<void> _submit() async {
     if (file == null) return;
-  
+
     setState(() => loading = true);
-  
-    final err = await assignmentService.submitAssignment(
+
+    final err = await service.submitAssignment(
       assignmentId: widget.assignmentId,
       file: file!,
     );
-  
+
     setState(() => loading = false);
-  
+
     if (err == null) {
       Navigator.pop(context);
     } else {
@@ -63,7 +62,8 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
               onPressed: _pickFile,
               child: const Text("Pick File"),
             ),
-            if (file != null) Text(file!.path.split('/').last),
+            if (file != null)
+              Text(file!.path.split('/').last),
             const SizedBox(height: 20),
             loading
                 ? const CircularProgressIndicator()
