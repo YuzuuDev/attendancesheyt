@@ -28,7 +28,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
 
     final err = await assignmentService.createAssignment(
       classId: widget.classId,
-      teacherId: teacherId,
+      //teacherId: teacherId,
       title: titleCtrl.text,
       description: descCtrl.text,
       dueDate: dueDate,
