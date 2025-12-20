@@ -41,7 +41,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
 
     final err = await assignmentService.submitAssignment(
       assignmentId: widget.assignmentId,
-      studentId: studentId,
+      //studentId: studentId,
       file: file!,
     );
 
