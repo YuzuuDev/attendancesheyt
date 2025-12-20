@@ -42,8 +42,36 @@ class AssignmentService {
     
     return List<Map<String, dynamic>>.from(res);
   }
+  Future<void> submitAssignment({
+    required String assignmentId,
+    required String filePath,
+  }) async {
+    final supabase = SupabaseClientInstance.supabase;
+    final user = supabase.auth.currentUser!;
+    final userId = user.id;
   
-  Future<String?> submitAssignment({
+    final fileName = filePath.split('/').last;
+    final storagePath = '$userId/$assignmentId/$fileName';
+  
+    // 1️⃣ Upload file
+    await supabase.storage
+        .from('assignments')
+        .upload(storagePath, File(filePath));
+  
+    // 2️⃣ Get file URL
+    final fileUrl = supabase.storage
+        .from('assignments')
+        .getPublicUrl(storagePath);
+  
+    // 3️⃣ INSERT submission row (THIS IS THE FIX)
+    await supabase.from('assignment_submissions').insert({
+      'assignment_id': assignmentId,
+      'student_id': userId,
+      'file_url': fileUrl,
+    });
+  }
+
+  /*Future<String?> submitAssignment({
     required String assignmentId,
     required String studentId,
     required File file,
@@ -90,41 +118,8 @@ class AssignmentService {
       }
       return e.toString();
     }
-  }
-
-  /// Student submits assignment
-  /*Future<String?> submitAssignment({
-    required String assignmentId,
-    required String studentId,
-    required File file,
-    }) async {
-    try {
-    final filePath = '$assignmentId/$studentId-${DateTime.now().millisecondsSinceEpoch}';
-    
-    
-    await _supabase.storage
-    .from('assignment_uploads')
-    .upload(filePath, file);
-    
-    
-    final fileUrl = _supabase.storage
-    .from('assignment_uploads')
-    .getPublicUrl(filePath);
-    
-    
-    await _supabase.from('assignment_submissions').insert({
-    'assignment_id': assignmentId,
-    'student_id': studentId,
-    'file_url': fileUrl,
-    });
-    
-    
-    return null;
-    } catch (e) {
-    return e.toString();
-    }
   }*/
-  
+
   
   /// Teacher views submissions
   Future<List<Map<String, dynamic>>> getSubmissions(String assignmentId) async {
