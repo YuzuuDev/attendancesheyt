@@ -1,4 +1,101 @@
 import 'package:flutter/material.dart';
+import '../../supabase_client.dart';
+
+class AssignmentSubmissionsScreen extends StatefulWidget {
+  final String assignmentId;
+  final String title;
+
+  const AssignmentSubmissionsScreen({
+    required this.assignmentId,
+    required this.title,
+    super.key,
+  });
+
+  @override
+  State<AssignmentSubmissionsScreen> createState() =>
+      _AssignmentSubmissionsScreenState();
+}
+
+class _AssignmentSubmissionsScreenState
+    extends State<AssignmentSubmissionsScreen> {
+  bool loading = true;
+  List<Map<String, dynamic>> submissions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSubmissions();
+  }
+
+  Future<void> _loadSubmissions() async {
+    try {
+      final data = await SupabaseClientInstance.supabase
+          .from('assignment_submissions')
+          .select('''
+            id,
+            file_url,
+            submitted_at,
+            profiles (
+              full_name
+            )
+          ''')
+          .eq('assignment_id', widget.assignmentId)
+          .order('submitted_at', ascending: false);
+
+      setState(() {
+        submissions = List<Map<String, dynamic>>.from(data);
+        loading = false;
+      });
+    } catch (e) {
+      debugPrint('LOAD ERROR: $e');
+      setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
+      ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : submissions.isEmpty
+              ? const Center(child: Text("No submissions yet"))
+              : ListView.builder(
+                  itemCount: submissions.length,
+                  itemBuilder: (_, index) {
+                    final s = submissions[index];
+                    final profile = s['profiles'];
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      child: ListTile(
+                        title:
+                            Text(profile?['full_name'] ?? 'Unknown Student'),
+                        subtitle: Text(
+                          s['submitted_at'] != null
+                              ? DateTime.parse(s['submitted_at'])
+                                  .toLocal()
+                                  .toString()
+                              : '',
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.download),
+                          onPressed: () {
+                            // open file_url in browser or viewer
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+}
+
+/*import 'package:flutter/material.dart';
 import '../../services/assignment_service.dart';
 import '../../services/participation_service.dart';
 
@@ -145,4 +242,4 @@ class _AssignmentSubmissionsScreenState
             ),
     );
   }
-}
+}*/
