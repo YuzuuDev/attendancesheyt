@@ -39,4 +39,38 @@ class _StudentAssignmentsScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Assignments')),
-      body: loa
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : assignments.isEmpty
+              ? const Center(child: Text('No assignments yet'))
+              : ListView.builder(
+                  itemCount: assignments.length,
+                  itemBuilder: (context, index) {
+                    final a = assignments[index];
+
+                    return Card(
+                      margin: const EdgeInsets.all(10),
+                      child: ListTile(
+                        title: Text(a['title']),
+                        subtitle: Text(a['description'] ?? ''),
+                        trailing: ElevatedButton(
+                          child: const Text('Submit'),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => SubmitAssignmentScreen(
+                                  assignmentId: a['id'],
+                                  title: a['title'],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+}
