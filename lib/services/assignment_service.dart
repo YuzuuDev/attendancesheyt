@@ -54,11 +54,11 @@ class AssignmentService {
       final path = '$userId/$assignmentId/$fileName';
 
       await _supabase.storage
-          .from('assignments')
+          .from('assignment_uploads')
           .upload(path, file, fileOptions: const FileOptions(upsert: true));
 
       final fileUrl =
-          _supabase.storage.from('assignments').getPublicUrl(path);
+          _supabase.storage.from('assignment_uploads').getPublicUrl(path);
 
       await _supabase.from('assignment_submissions').insert({
         'assignment_id': assignmentId,
