@@ -22,20 +22,16 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
 
   void _create() async {
     setState(() => loading = true);
-
-    final teacherId =
-        SupabaseClientInstance.supabase.auth.currentUser!.id;
-
+  
     final err = await assignmentService.createAssignment(
       classId: widget.classId,
-      //teacherId: teacherId,
       title: titleCtrl.text,
       description: descCtrl.text,
       dueDate: dueDate,
     );
-
+  
     setState(() => loading = false);
-
+  
     if (err == null) {
       Navigator.pop(context);
     } else {
