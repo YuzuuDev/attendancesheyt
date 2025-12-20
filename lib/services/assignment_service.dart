@@ -43,26 +43,41 @@ class AssignmentService {
      STUDENT
      =============================== */
 
-  Future<void> submitAssignment({
+  // Submit assignment (FILE + DB ROW)
+  Future<String?> submitAssignment({
     required String assignmentId,
     required File file,
   }) async {
-    final userId = _supabase.auth.currentUser!.id;
-
-    final fileName = file.path.split('/').last;
-    final path = '$userId/$assignmentId/$fileName';
-
-    await _supabase.storage.from('assignments').upload(path, file);
-
-    final fileUrl =
-        _supabase.storage.from('assignments').getPublicUrl(path);
-
-    await _supabase.from('assignment_submissions').insert({
-      'assignment_id': assignmentId,
-      'student_id': userId,
-      'file_url': fileUrl,
-    });
+    try {
+      final user = _supabase.auth.currentUser!;
+      final userId = user.id;
+  
+      final fileName = file.path.split('/').last;
+      final storagePath = '$userId/$assignmentId/$fileName';
+  
+      // Upload file
+      await _supabase.storage
+          .from('assignments')
+          .upload(storagePath, file, fileOptions: const FileOptions(upsert: true));
+  
+      // Get public URL
+      final fileUrl = _supabase.storage
+          .from('assignments')
+          .getPublicUrl(storagePath);
+  
+      // Insert submission row
+      await _supabase.from('assignment_submissions').insert({
+        'assignment_id': assignmentId,
+        'student_id': userId,
+        'file_url': fileUrl,
+      });
+  
+      return null; // ✅ SUCCESS
+    } catch (e) {
+      return e.toString(); // ❌ ERROR MESSAGE
+    }
   }
+
 
   Future<List<Map<String, dynamic>>> getSubmissions(String assignmentId) async {
     final res = await _supabase
