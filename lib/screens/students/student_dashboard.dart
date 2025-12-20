@@ -172,7 +172,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                                 MaterialPageRoute(
                                   builder: (_) => StudentAssignmentsScreen(
                                     classId: classes[index]['class_id'],
-                                    className: cls['name'],
+                                    //className: cls['name'],
                                   ),
                                 ),
                               );
