@@ -53,6 +53,7 @@ class _StudentAssignmentsScreenState
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
+                      elevation: 6, 
                       child: ListTile(
                         title: Text(
                           a['title'],
