@@ -40,7 +40,7 @@ class AssignmentService {
   }
 
   /* ===============================
-     SUBMISSIONS — FIXED FOR REAL
+     SUBMISSIONS
      =============================== */
 
   Future<String?> submitAssignment({
@@ -49,22 +49,20 @@ class AssignmentService {
   }) async {
     try {
       final userId = _supabase.auth.currentUser!.id;
-  
-      /// 🔒 STEP 1: CHECK IF ASSIGNMENT IS LOCKED
+
       final assignment = await _supabase
           .from('assignments')
           .select('is_locked')
           .eq('id', assignmentId)
           .single();
-  
+
       if (assignment['is_locked'] == true) {
         return "Submissions are closed";
       }
-  
-      /// 📁 STEP 2: UPLOAD FILE
+
       final fileName = file.path.split('/').last;
       final path = '$userId/$assignmentId/$fileName';
-  
+
       await _supabase.storage
           .from('assignment_uploads')
           .upload(
@@ -72,34 +70,20 @@ class AssignmentService {
             file,
             fileOptions: const FileOptions(upsert: true),
           );
-  
-      /// 🌐 STEP 3: GET PUBLIC URL
-      /*final fileUrl =
-          _supabase.storage.from('assignment_uploads').getPublicUrl(path);*/
-      final signed = await _supabase.storage
-          .from('assignment_uploads')
-          .createSignedUrl(path, 60 * 60); // 1 hour
-  
-      final fileUrl = signed;
 
-  
-      /// 📝 STEP 4: INSERT / UPDATE SUBMISSION
       await _supabase.from('assignment_submissions').upsert({
         'assignment_id': assignmentId,
         'student_id': userId,
-        'file_url': fileUrl,
+        'file_url': path, // STORE PATH ONLY
       });
-  
-      return null; // success
+
+      return null;
     } catch (e) {
       return e.toString();
     }
   }
 
-  /// 🚨 THIS IS THE IMPORTANT PART
-  /// NO JOIN. MANUAL PROFILE FETCH.
-  Future<List<Map<String, dynamic>>> getSubmissions(
-      String assignmentId) async {
+  Future<List<Map<String, dynamic>>> getSubmissions(String assignmentId) async {
     final submissions = await _supabase
         .from('assignment_submissions')
         .select('id, file_url, submitted_at, student_id')
@@ -110,8 +94,15 @@ class AssignmentService {
         List<Map<String, dynamic>>.from(submissions);
 
     for (int i = 0; i < result.length; i++) {
-      final studentId = result[i]['student_id'];
+      final path = result[i]['file_url'];
 
+      final signedUrl = await _supabase.storage
+          .from('assignment_uploads')
+          .createSignedUrl(path, 60 * 15);
+
+      result[i]['file_url'] = signedUrl;
+
+      final studentId = result[i]['student_id'];
       final profile = await _supabase
           .from('profiles')
           .select('full_name')
@@ -123,16 +114,33 @@ class AssignmentService {
 
     return result;
   }
+
   Future<Map<String, dynamic>?> getMySubmission(String assignmentId) async {
     final userId = _supabase.auth.currentUser!.id;
-  
-    return await _supabase
+
+    final res = await _supabase
         .from('assignment_submissions')
         .select('id, file_url, submitted_at, grade, feedback')
         .eq('assignment_id', assignmentId)
         .eq('student_id', userId)
         .maybeSingle();
+
+    if (res == null) return null;
+
+    final path = res['file_url'];
+
+    final signedUrl = await _supabase.storage
+        .from('assignment_uploads')
+        .createSignedUrl(path, 60 * 15);
+
+    res['file_url'] = signedUrl;
+    return res;
   }
+
+  /* ===============================
+     TEACHER CONTROLS
+     =============================== */
+
   Future<void> updateAssignment({
     required String assignmentId,
     String? title,
@@ -149,6 +157,7 @@ class AssignmentService {
       if (isLocked != null) 'is_locked': isLocked,
     }).eq('id', assignmentId);
   }
+
   Future<void> gradeSubmission({
     required String submissionId,
     required int grade,
@@ -159,6 +168,4 @@ class AssignmentService {
       'feedback': feedback,
     }).eq('id', submissionId);
   }
-
-
 }
