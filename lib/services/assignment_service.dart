@@ -74,8 +74,14 @@ class AssignmentService {
           );
   
       /// 🌐 STEP 3: GET PUBLIC URL
-      final fileUrl =
-          _supabase.storage.from('assignment_uploads').getPublicUrl(path);
+      /*final fileUrl =
+          _supabase.storage.from('assignment_uploads').getPublicUrl(path);*/
+      final signed = await _supabase.storage
+          .from('assignment_uploads')
+          .createSignedUrl(path, 60 * 60); // 1 hour
+  
+      final fileUrl = signed;
+
   
       /// 📝 STEP 4: INSERT / UPDATE SUBMISSION
       await _supabase.from('assignment_submissions').upsert({
