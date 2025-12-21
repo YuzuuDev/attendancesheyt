@@ -1,4 +1,9 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/assignment_service.dart';
@@ -13,23 +18,56 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
     super.key,
   });
 
-  bool _isImage(String url) {
+  bool _isPreviewable(String url) {
     final u = url.toLowerCase();
     return u.endsWith('.png') ||
         u.endsWith('.jpg') ||
         u.endsWith('.jpeg') ||
         u.endsWith('.gif') ||
-        u.endsWith('.webp');
+        u.endsWith('.webp') ||
+        u.endsWith('.mp4') ||
+        u.endsWith('.mov');
   }
 
-  Future<void> _openExternal(String url) async {
+  /// 🔒 DOWNLOAD FIRST (NO BROWSER, NO SUPABASE UI)
+  Future<File> _downloadToLocal(String url) async {
     final uri = Uri.parse(url);
+    final client = HttpClient();
 
-    if (!await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    )) {
-      throw 'Could not open file';
+    final request = await client.getUrl(uri);
+    final response = await request.close();
+
+    if (response.statusCode != 200) {
+      throw Exception('Download failed');
+    }
+
+    final Uint8List bytes =
+        await consolidateHttpClientResponseBytes(response);
+
+    final dir = await getApplicationDocumentsDirectory();
+    final fileName = uri.pathSegments.last;
+    final file = File('${dir.path}/$fileName');
+
+    await file.writeAsBytes(bytes, flush: true);
+    return file;
+  }
+
+  /// ✅ OPEN LOCAL FILE WITH NATIVE APP
+  Future<void> _downloadAndOpen(
+    BuildContext context,
+    String url,
+  ) async {
+    try {
+      final file = await _downloadToLocal(url);
+
+      await launchUrl(
+        Uri.file(file.path),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to open file')),
+      );
     }
   }
 
@@ -41,16 +79,12 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
       appBar: AppBar(title: Text(title)),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: service.getSubmissions(assignmentId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+        builder: (context, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (snapshot.hasError) {
-            return Center(child: Text(snapshot.error.toString()));
-          }
-
-          final submissions = snapshot.data ?? [];
+          final submissions = snap.data ?? [];
           if (submissions.isEmpty) {
             return const Center(child: Text('No submissions yet'));
           }
@@ -77,21 +111,10 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 8),
 
-                      Text(
-                        s['submitted_at'] != null
-                            ? DateTime.parse(s['submitted_at'])
-                                .toLocal()
-                                .toString()
-                            : '',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      /// IMAGE → INLINE PREVIEW
-                      if (fileUrl != null && _isImage(fileUrl))
+                      /// 🖼 IMAGE / VIDEO PREVIEW
+                      if (fileUrl != null && _isPreviewable(fileUrl))
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: Image.network(
@@ -99,35 +122,26 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                             height: 180,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) =>
-                                const Text('Image failed to load'),
+                                const Text('Preview failed'),
                           ),
                         ),
 
-                      /// EVERYTHING ELSE → HAND OFF TO OS
-                      if (fileUrl != null && !_isImage(fileUrl))
+                      /// 📄 DOCX / PDF / ZIP → DOWNLOAD & OPEN LOCALLY
+                      if (fileUrl != null && !_isPreviewable(fileUrl))
                         ElevatedButton.icon(
-                          icon: const Icon(Icons.open_in_new),
-                          label: const Text('Open File'),
-                          onPressed: () async {
-                            try {
-                              await _openExternal(fileUrl);
-                            } catch (_) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Failed to open file'),
-                                ),
-                              );
-                            }
-                          },
+                          icon: const Icon(Icons.download),
+                          label: const Text('Download & Open'),
+                          onPressed: () =>
+                              _downloadAndOpen(context, fileUrl),
                         ),
 
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
 
-                      /// GRADE
+                      /// ✏️ GRADE
                       TextButton.icon(
                         icon: const Icon(Icons.edit),
                         label: const Text('Grade'),
-                        onPressed: () {
+                        onPressed: () async {
                           final gradeCtrl = TextEditingController();
                           final feedbackCtrl = TextEditingController();
 
@@ -142,14 +156,12 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                                     controller: gradeCtrl,
                                     keyboardType: TextInputType.number,
                                     decoration: const InputDecoration(
-                                      labelText: 'Grade',
-                                    ),
+                                        labelText: 'Grade'),
                                   ),
                                   TextField(
                                     controller: feedbackCtrl,
                                     decoration: const InputDecoration(
-                                      labelText: 'Feedback',
-                                    ),
+                                        labelText: 'Feedback'),
                                   ),
                                 ],
                               ),
@@ -169,7 +181,7 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                             ),
                           );
                         },
-                      )
+                      ),
                     ],
                   ),
                 ),
@@ -181,6 +193,7 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
     );
   }
 }
+
 
 
 /*import 'package:flutter/material.dart';
