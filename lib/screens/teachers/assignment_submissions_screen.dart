@@ -1,7 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/assignment_service.dart';
 
 class AssignmentSubmissionsScreen extends StatelessWidget {
@@ -15,27 +13,23 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
   });
 
   bool _isImage(String url) {
-    final u = url.toLowerCase();
-    return u.endsWith('.png') ||
-        u.endsWith('.jpg') ||
-        u.endsWith('.jpeg') ||
-        u.endsWith('.webp');
+    final lower = url.toLowerCase();
+    return lower.endsWith('.png') ||
+        lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.gif') ||
+        lower.endsWith('.webp');
   }
 
-  bool _isPdf(String url) {
-    return url.toLowerCase().endsWith('.pdf');
-  }
+  Future<void> _downloadAndOpen(String url) async {
+    final uri = Uri.parse(url);
 
-  Future<void> _download(BuildContext context, String url) async {
-    final res = await http.get(Uri.parse(url));
-    final dir = await getApplicationDocumentsDirectory();
-    final file =
-        File('${dir.path}/${Uri.parse(url).pathSegments.last}');
-    await file.writeAsBytes(res.bodyBytes);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("File downloaded")),
-    );
+    if (!await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    )) {
+      throw 'Could not open file';
+    }
   }
 
   @override
@@ -74,7 +68,7 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      /// NAME
+                      /// STUDENT NAME
                       Text(
                         profile?['full_name'] ?? s['student_id'],
                         style: const TextStyle(
@@ -85,124 +79,107 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
 
                       const SizedBox(height: 4),
 
-                      /// DATE
+                      /// SUBMISSION TIME
                       Text(
-                        s['submitted_at'] != null
-                            ? DateTime.parse(s['submitted_at'])
-                                .toLocal()
-                                .toString()
-                            : '',
+                        DateTime.parse(s['submitted_at'])
+                            .toLocal()
+                            .toString(),
                         style: const TextStyle(fontSize: 12),
                       ),
 
                       const SizedBox(height: 12),
 
-                      /// PREVIEW (NO AUTO OPEN)
+                      /// 🔍 IMAGE PREVIEW ONLY
                       if (fileUrl != null && _isImage(fileUrl))
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: Image.network(
                             fileUrl,
-                            height: 180,
+                            height: 200,
+                            width: double.infinity,
                             fit: BoxFit.cover,
+                            loadingBuilder:
+                                (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return const SizedBox(
+                                height: 200,
+                                child: Center(
+                                    child: CircularProgressIndicator()),
+                              );
+                            },
                           ),
-                        )
-                      else if (fileUrl != null && _isPdf(fileUrl))
-                        Container(
-                          height: 120,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.green),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            "PDF file\nPreview via Download",
-                            textAlign: TextAlign.center,
-                          ),
-                        )
-                      else
-                        const Text(
-                          "No preview available for this file type",
-                          style: TextStyle(color: Colors.grey),
                         ),
 
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
 
-                      /// DOWNLOAD (SEPARATE, EXPLICIT)
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          icon: const Icon(Icons.download),
-                          label: const Text("Download"),
-                          onPressed: fileUrl == null
-                              ? null
-                              : () => _download(context, fileUrl),
-                        ),
-                      ),
+                      /// ACTION BUTTONS
+                      Row(
+                        children: [
+                          /// DOWNLOAD / OPEN (ALL FILES)
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.download),
+                            label: const Text("Download"),
+                            onPressed: fileUrl == null
+                                ? null
+                                : () => _downloadAndOpen(fileUrl),
+                          ),
 
-                      const Divider(),
+                          const SizedBox(width: 12),
 
-                      /// GRADE
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          icon: const Icon(Icons.edit),
-                          label: const Text("Grade"),
-                          onPressed: () {
-                            final gradeCtrl =
-                                TextEditingController();
-                            final feedbackCtrl =
-                                TextEditingController();
+                          /// GRADE
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.edit),
+                            label: const Text("Grade"),
+                            onPressed: () {
+                              final gradeCtrl = TextEditingController();
+                              final feedbackCtrl = TextEditingController();
 
-                            showDialog(
-                              context: context,
-                              builder: (_) => AlertDialog(
-                                title:
-                                    const Text("Grade Submission"),
-                                content: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    TextField(
-                                      controller: gradeCtrl,
-                                      keyboardType:
-                                          TextInputType.number,
-                                      decoration:
-                                          const InputDecoration(
-                                              labelText:
-                                                  "Grade"),
-                                    ),
-                                    TextField(
-                                      controller: feedbackCtrl,
-                                      decoration:
-                                          const InputDecoration(
-                                              labelText:
-                                                  "Feedback"),
-                                    ),
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title:
+                                      const Text("Grade Submission"),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      TextField(
+                                        controller: gradeCtrl,
+                                        keyboardType:
+                                            TextInputType.number,
+                                        decoration:
+                                            const InputDecoration(
+                                                labelText: "Grade"),
+                                      ),
+                                      TextField(
+                                        controller: feedbackCtrl,
+                                        decoration:
+                                            const InputDecoration(
+                                                labelText:
+                                                    "Feedback"),
+                                      ),
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () async {
+                                        await service.gradeSubmission(
+                                          submissionId: s['id'],
+                                          grade: int.parse(
+                                              gradeCtrl.text),
+                                          feedback:
+                                              feedbackCtrl.text,
+                                        );
+                                        Navigator.pop(context);
+                                      },
+                                      child: const Text("Save"),
+                                    )
                                   ],
                                 ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () async {
-                                      await service
-                                          .gradeSubmission(
-                                        submissionId:
-                                            s['id'],
-                                        grade: int.parse(
-                                            gradeCtrl.text),
-                                        feedback:
-                                            feedbackCtrl.text,
-                                      );
-                                      Navigator.pop(context);
-                                    },
-                                    child:
-                                        const Text("Save"),
-                                  )
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                              );
+                            },
+                          ),
+                        ],
+                      )
                     ],
                   ),
                 ),
@@ -214,6 +191,7 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
     );
   }
 }
+
 
 
 
