@@ -1,9 +1,4 @@
-import 'dart:io';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/assignment_service.dart';
@@ -27,36 +22,14 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
         u.endsWith('.webp');
   }
 
-  Future<File> _downloadFile(String url) async {
+  Future<void> _openExternal(String url) async {
     final uri = Uri.parse(url);
-    final client = HttpClient();
 
-    final request = await client.getUrl(uri);
-    final response = await request.close();
-
-    final Uint8List bytes =
-        await consolidateHttpClientResponseBytes(response);
-
-    final dir = await getApplicationDocumentsDirectory();
-    final fileName = uri.pathSegments.last;
-    final file = File('${dir.path}/$fileName');
-
-    await file.writeAsBytes(bytes, flush: true);
-    return file;
-  }
-
-  Future<void> _openFile(BuildContext context, String url) async {
-    try {
-      final file = await _downloadFile(url);
-
-      await launchUrl(
-        Uri.file(file.path),
-        mode: LaunchMode.externalApplication,
-      );
-    } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to open file')),
-      );
+    if (!await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    )) {
+      throw 'Could not open file';
     }
   }
 
@@ -130,13 +103,22 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                           ),
                         ),
 
-                      /// NON-IMAGE → DOWNLOAD & OPEN (NO PREVIEW)
+                      /// EVERYTHING ELSE → HAND OFF TO OS
                       if (fileUrl != null && !_isImage(fileUrl))
                         ElevatedButton.icon(
-                          icon: const Icon(Icons.download),
-                          label: const Text('Download & Open'),
-                          onPressed: () =>
-                              _openFile(context, fileUrl),
+                          icon: const Icon(Icons.open_in_new),
+                          label: const Text('Open File'),
+                          onPressed: () async {
+                            try {
+                              await _openExternal(fileUrl);
+                            } catch (_) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Failed to open file'),
+                                ),
+                              );
+                            }
+                          },
                         ),
 
                       const SizedBox(height: 12),
@@ -160,12 +142,14 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                                     controller: gradeCtrl,
                                     keyboardType: TextInputType.number,
                                     decoration: const InputDecoration(
-                                        labelText: 'Grade'),
+                                      labelText: 'Grade',
+                                    ),
                                   ),
                                   TextField(
                                     controller: feedbackCtrl,
                                     decoration: const InputDecoration(
-                                        labelText: 'Feedback'),
+                                      labelText: 'Feedback',
+                                    ),
                                   ),
                                 ],
                               ),
@@ -197,8 +181,6 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
     );
   }
 }
-
-
 
 
 /*import 'package:flutter/material.dart';
