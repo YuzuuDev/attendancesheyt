@@ -1,108 +1,90 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 
-class SubmissionPreviewScreen extends StatefulWidget {
+class SubmissionPreviewWidget extends StatelessWidget {
   final String fileUrl;
 
-  const SubmissionPreviewScreen({
-    required this.fileUrl,
-    super.key,
-  });
+  const SubmissionPreviewWidget({required this.fileUrl, super.key});
 
-  @override
-  State<SubmissionPreviewScreen> createState() =>
-      _SubmissionPreviewScreenState();
-}
-
-class _SubmissionPreviewScreenState
-    extends State<SubmissionPreviewScreen> {
-  bool loading = false;
-  String? error;
-
-  Future<File> _downloadFile() async {
-    final uri = Uri.parse(widget.fileUrl);
-    final res = await http.get(uri);
-
-    if (res.statusCode != 200) {
-      throw Exception('Download failed');
-    }
-
-    final dir = await getTemporaryDirectory();
-    final fileName = uri.pathSegments.last;
-    final file = File('${dir.path}/$fileName');
-
-    await file.writeAsBytes(res.bodyBytes);
-    return file;
+  bool get isImage {
+    final l = fileUrl.toLowerCase();
+    return l.endsWith('.png') ||
+        l.endsWith('.jpg') ||
+        l.endsWith('.jpeg') ||
+        l.endsWith('.webp');
   }
 
-  Future<void> _preview() async {
-    setState(() => loading = true);
-    try {
-      final file = await _downloadFile();
-      await OpenFilex.open(file.path);
-    } catch (e) {
-      setState(() => error = e.toString());
-    } finally {
-      setState(() => loading = false);
-    }
-  }
-
-  Future<void> _downloadOnly() async {
-    setState(() => loading = true);
-    try {
-      await _downloadFile();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Downloaded')),
-      );
-    } catch (e) {
-      setState(() => error = e.toString());
-    } finally {
-      setState(() => loading = false);
-    }
+  bool get isPdf {
+    return fileUrl.toLowerCase().endsWith('.pdf');
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Submission')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            if (error != null)
-              Text(
-                error!,
-                style: const TextStyle(color: Colors.red),
-              ),
-
-            const Spacer(),
-
-            ElevatedButton.icon(
-              icon: const Icon(Icons.visibility),
-              label: const Text('Preview'),
-              onPressed: loading ? null : _preview,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        /// PREVIEW AREA
+        if (isImage)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              fileUrl,
+              height: 180,
+              fit: BoxFit.cover,
+              loadingBuilder: (_, child, loading) =>
+                  loading == null
+                      ? child
+                      : const LinearProgressIndicator(),
             ),
-
-            const SizedBox(height: 12),
-
-            OutlinedButton.icon(
-              icon: const Icon(Icons.download),
-              label: const Text('Download'),
-              onPressed: loading ? null : _downloadOnly,
+          )
+        else if (isPdf)
+          Container(
+            height: 120,
+            width: double.infinity,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green),
             ),
+            child: const Text(
+              "PDF file\nPreview available via Download",
+              textAlign: TextAlign.center,
+            ),
+          )
+        else
+          const Text(
+            "No preview available for this file type",
+            style: TextStyle(color: Colors.grey),
+          ),
 
-            const Spacer(),
+        const SizedBox(height: 8),
 
-            if (loading) const CircularProgressIndicator(),
-          ],
+        /// DOWNLOAD BUTTON (EXPLICIT)
+        TextButton.icon(
+          icon: const Icon(Icons.download),
+          label: const Text("Download"),
+          onPressed: () async {
+            final uri = Uri.parse(fileUrl);
+            final res = await http.get(uri);
+
+            final dir = await getApplicationDocumentsDirectory();
+            final file =
+                File('${dir.path}/${uri.pathSegments.last}');
+            await file.writeAsBytes(res.bodyBytes);
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("File downloaded")),
+            );
+          },
         ),
-      ),
+      ],
     );
   }
 }
+
 
 
 
