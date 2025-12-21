@@ -1,7 +1,4 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/assignment_service.dart';
 
@@ -24,39 +21,13 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
         u.endsWith('.webp');
   }
 
-  /// 🔽 DOWNLOAD TO PUBLIC DOWNLOADS (ANDROID SAFE)
-  Future<File> _downloadToDownloads(String url) async {
+  Future<void> _openExternally(BuildContext context, String url) async {
     final uri = Uri.parse(url);
-    final client = HttpClient();
-    final request = await client.getUrl(uri);
-    final response = await request.close();
 
-    final bytes = await consolidateHttpClientResponseBytes(response);
-
-    final fileName = uri.pathSegments.last;
-
-    Directory dir;
-    if (Platform.isAndroid) {
-      dir = Directory('/storage/emulated/0/Download');
-    } else {
-      dir = await getApplicationDocumentsDirectory();
-    }
-
-    final file = File('${dir.path}/$fileName');
-    await file.writeAsBytes(bytes, flush: true);
-    return file;
-  }
-
-  Future<void> _downloadAndOpen(
-      BuildContext context, String url) async {
-    try {
-      final file = await _downloadToDownloads(url);
-
-      await launchUrl(
-        Uri.file(file.path),
-        mode: LaunchMode.externalApplication,
-      );
-    } catch (_) {
+    if (!await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    )) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to open file")),
       );
@@ -99,32 +70,102 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      /// STUDENT
                       Text(
                         profile?['full_name'] ?? s['student_id'],
                         style: const TextStyle(
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
 
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
 
+                      /// DATE
+                      Text(
+                        s['submitted_at'] != null
+                            ? DateTime.parse(s['submitted_at'])
+                                .toLocal()
+                                .toString()
+                            : '',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      /// IMAGE → INLINE PREVIEW
                       if (fileUrl != null && _isImage(fileUrl))
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            fileUrl,
-                            height: 180,
-                            fit: BoxFit.cover,
+                        GestureDetector(
+                          onTap: () => _openExternally(context, fileUrl),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              fileUrl,
+                              height: 180,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  const Text("Image failed to load"),
+                            ),
                           ),
                         ),
 
+                      /// NON-IMAGE → OPEN EXTERNALLY (NO DOWNLOAD)
                       if (fileUrl != null && !_isImage(fileUrl))
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.download),
-                          label: const Text("Download & Open"),
+                        TextButton.icon(
+                          icon: const Icon(Icons.open_in_new),
+                          label: const Text("Open File"),
                           onPressed: () =>
-                              _downloadAndOpen(context, fileUrl),
+                              _openExternally(context, fileUrl),
                         ),
+
+                      const SizedBox(height: 12),
+
+                      /// GRADE
+                      TextButton.icon(
+                        icon: const Icon(Icons.edit),
+                        label: const Text("Grade"),
+                        onPressed: () {
+                          final gradeCtrl = TextEditingController();
+                          final feedbackCtrl = TextEditingController();
+
+                          showDialog(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                              title: const Text("Grade Submission"),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TextField(
+                                    controller: gradeCtrl,
+                                    keyboardType: TextInputType.number,
+                                    decoration: const InputDecoration(
+                                        labelText: "Grade"),
+                                  ),
+                                  TextField(
+                                    controller: feedbackCtrl,
+                                    decoration: const InputDecoration(
+                                        labelText: "Feedback"),
+                                  ),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () async {
+                                    await service.gradeSubmission(
+                                      submissionId: s['id'],
+                                      grade:
+                                          int.parse(gradeCtrl.text),
+                                      feedback: feedbackCtrl.text,
+                                    );
+                                    Navigator.pop(context);
+                                  },
+                                  child: const Text("Save"),
+                                )
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -136,6 +177,7 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
     );
   }
 }
+
 
 
 /*import 'package:flutter/material.dart';
