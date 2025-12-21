@@ -97,12 +97,13 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                       Text(
                         profile?['full_name'] ?? s['student_id'],
                         style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
 
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
 
-                      /// IMAGE → INLINE PREVIEW
                       if (path != null && _isImage(path))
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
@@ -113,7 +114,6 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                           ),
                         ),
 
-                      /// DOC / PDF / OTHER → DOWNLOAD + OPEN (NO SUPABASE SITE)
                       if (path != null && !_isImage(path))
                         ElevatedButton.icon(
                           icon: const Icon(Icons.download),
@@ -141,9 +141,15 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                                   TextField(
                                     controller: gradeCtrl,
                                     keyboardType: TextInputType.number,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Grade',
+                                    ),
                                   ),
                                   TextField(
                                     controller: feedbackCtrl,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Feedback',
+                                    ),
                                   ),
                                 ],
                               ),
@@ -152,7 +158,8 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                                   onPressed: () async {
                                     await service.gradeSubmission(
                                       submissionId: s['id'],
-                                      grade: int.parse(gradeCtrl.text),
+                                      grade:
+                                          int.parse(gradeCtrl.text),
                                       feedback: feedbackCtrl.text,
                                     );
                                     Navigator.pop(context);
