@@ -7,8 +7,24 @@ class AssignmentService {
   /* ===============================
      ASSIGNMENTS
      =============================== */
-
   Future<void> createAssignment({
+    required String classId,
+    required String title,
+    String? description,
+    DateTime? dueDate,
+    required String assignmentType,
+  }) async {
+    await _supabase.from('assignments').insert({
+      'class_id': classId,
+      'teacher_id': _supabase.auth.currentUser!.id,
+      'title': title,
+      'description': description,
+      'due_date': dueDate?.toIso8601String(),
+      'assignment_type': assignmentType,
+    });
+  }
+
+  /*Future<void> createAssignment({
     required String classId,
     required String title,
     String? description,
@@ -23,9 +39,15 @@ class AssignmentService {
       'description': description,
       'due_date': dueDate?.toIso8601String(),
     });
-  }
-
+  }*/
   Future<List<Map<String, dynamic>>> getAssignments(String classId) async {
+    return await _supabase
+        .from('assignments')
+        .select()
+        .eq('class_id', classId)
+        .order('created_at');
+  }
+  /*Future<List<Map<String, dynamic>>> getAssignments(String classId) async {
     final res = await _supabase
         .from('assignments')
         .select('*')
@@ -33,7 +55,7 @@ class AssignmentService {
         .order('created_at', ascending: false);
 
     return List<Map<String, dynamic>>.from(res);
-  }
+  }*/
 
   Future<void> deleteAssignment(String assignmentId) async {
     await _supabase.from('assignments').delete().eq('id', assignmentId);
