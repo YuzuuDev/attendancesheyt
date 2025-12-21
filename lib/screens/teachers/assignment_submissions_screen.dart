@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // ✅ REQUIRED
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -23,17 +24,14 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
         u.endsWith('.jpg') ||
         u.endsWith('.jpeg') ||
         u.endsWith('.gif') ||
-        u.endsWith('.webp') ||
-        u.endsWith('.mp4') ||
-        u.endsWith('.mov') ||
-        u.endsWith('.webm');
+        u.endsWith('.webp');
   }
 
-  /// 🔥 DOWNLOAD FILE LOCALLY (NO SUPABASE WEBSITE)
+  /// ⬇️ DOWNLOAD FILE LOCALLY (HIDES SUPABASE URL)
   Future<File> _downloadFile(String url) async {
     final uri = Uri.parse(url);
-    final httpClient = HttpClient();
-    final request = await httpClient.getUrl(uri);
+    final client = HttpClient();
+    final request = await client.getUrl(uri);
     final response = await request.close();
 
     final Uint8List bytes =
@@ -57,7 +55,7 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
         Uri.file(file.path),
         mode: LaunchMode.externalApplication,
       );
-    } catch (e) {
+    } catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to open file")),
       );
@@ -123,7 +121,7 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
 
                       const SizedBox(height: 12),
 
-                      /// 👁 PREVIEW (IMAGES / VIDEO)
+                      /// 👁 IMAGE PREVIEW ONLY
                       if (fileUrl != null && _isPreviewable(fileUrl))
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
@@ -214,6 +212,7 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
     );
   }
 }
+
 
 
 /*import 'package:flutter/material.dart';
