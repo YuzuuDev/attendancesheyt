@@ -1,11 +1,9 @@
 import 'dart:io';
 import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../../services/assignment_service.dart';
 
 class AssignmentSubmissionsScreen extends StatelessWidget {
@@ -27,37 +25,34 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
         p.endsWith('.webp');
   }
 
-  Future<void> _downloadAndOpen(
-    BuildContext context,
-    String storagePath,
-  ) async {
+  Future<File> _downloadFile(String signedUrl) async {
+    final uri = Uri.parse(signedUrl);
+    final client = HttpClient();
+
+    final request = await client.getUrl(uri);
+    final response = await request.close();
+
+    final Uint8List bytes =
+        await consolidateHttpClientResponseBytes(response);
+
+    final dir = await getApplicationDocumentsDirectory();
+    final name = uri.pathSegments.last;
+    final file = File('${dir.path}/$name');
+
+    await file.writeAsBytes(bytes, flush: true);
+    return file;
+  }
+
+  Future<void> _openFile(BuildContext context, String signedUrl) async {
     try {
-      final supabase = Supabase.instance.client;
-
-      /// 🔥 DOWNLOAD VIA SDK (NOT SIGNED URL)
-      final Uint8List bytes = await supabase.storage
-          .from('assignment_uploads')
-          .download(storagePath);
-
-      final dir = await getApplicationDocumentsDirectory();
-      final fileName = storagePath.split('/').last;
-      final file = File('${dir.path}/$fileName');
-
-      await file.writeAsBytes(bytes, flush: true);
-
-      final uri = Uri.file(file.path);
-
-      final ok = await launchUrl(
-        uri,
+      final file = await _downloadFile(signedUrl);
+      await launchUrl(
+        Uri.file(file.path),
         mode: LaunchMode.externalApplication,
       );
-
-      if (!ok) {
-        throw 'No app found to open file';
-      }
-    } catch (e) {
+    } catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to open file')),
+        const SnackBar(content: Text('Failed to open file')),
       );
     }
   }
@@ -70,26 +65,27 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
       appBar: AppBar(title: Text(title)),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: service.getSubmissions(assignmentId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+        builder: (context, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (snapshot.hasError) {
-            return Center(child: Text(snapshot.error.toString()));
+          if (snap.hasError) {
+            return Center(child: Text(snap.error.toString()));
           }
 
-          final submissions = snapshot.data ?? [];
-          if (submissions.isEmpty) {
-            return const Center(child: Text('No submissions yet'));
+          final data = snap.data ?? [];
+          if (data.isEmpty) {
+            return const Center(child: Text('No submissions'));
           }
 
           return ListView.builder(
-            itemCount: submissions.length,
+            itemCount: data.length,
             itemBuilder: (_, i) {
-              final s = submissions[i];
+              final s = data[i];
               final profile = s['profile'];
-              final storagePath = s['file_path'];
+              final path = s['file_path'];
+              final signedUrl = s['signed_url'];
 
               return Card(
                 margin: const EdgeInsets.all(12),
@@ -101,34 +97,73 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                       Text(
                         profile?['full_name'] ?? s['student_id'],
                         style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                            fontSize: 16, fontWeight: FontWeight.bold),
                       ),
 
                       const SizedBox(height: 6),
 
-                      /// IMAGE PREVIEW ONLY
-                      if (storagePath != null && _isImage(storagePath))
+                      /// IMAGE → INLINE PREVIEW
+                      if (path != null && _isImage(path))
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: Image.network(
-                            service.getSignedUrl(storagePath),
+                            signedUrl,
                             height: 180,
                             fit: BoxFit.cover,
                           ),
                         ),
 
-                      const SizedBox(height: 8),
-
-                      /// EVERYTHING DOWNLOADS LOCALLY
-                      if (storagePath != null)
+                      /// DOC / PDF / OTHER → DOWNLOAD + OPEN (NO SUPABASE SITE)
+                      if (path != null && !_isImage(path))
                         ElevatedButton.icon(
                           icon: const Icon(Icons.download),
                           label: const Text('Download & Open'),
                           onPressed: () =>
-                              _downloadAndOpen(context, storagePath),
+                              _openFile(context, signedUrl),
                         ),
+
+                      const SizedBox(height: 12),
+
+                      TextButton.icon(
+                        icon: const Icon(Icons.edit),
+                        label: const Text('Grade'),
+                        onPressed: () {
+                          final gradeCtrl = TextEditingController();
+                          final feedbackCtrl = TextEditingController();
+
+                          showDialog(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                              title: const Text('Grade'),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TextField(
+                                    controller: gradeCtrl,
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                  TextField(
+                                    controller: feedbackCtrl,
+                                  ),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () async {
+                                    await service.gradeSubmission(
+                                      submissionId: s['id'],
+                                      grade: int.parse(gradeCtrl.text),
+                                      feedback: feedbackCtrl.text,
+                                    );
+                                    Navigator.pop(context);
+                                  },
+                                  child: const Text('Save'),
+                                )
+                              ],
+                            ),
+                          );
+                        },
+                      )
                     ],
                   ),
                 ),
@@ -140,8 +175,6 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
     );
   }
 }
-
-
 
 
 /*import 'package:flutter/material.dart';
