@@ -24,6 +24,10 @@ dependencies:
 
   url_launcher: ^6.2.5
 
+  cached_network_image: ^3.3.1
+  syncfusion_flutter_pdfviewer: ^25.1.35
+  path: ^1.9.0
+
   # UI
   flutter_material_pickers: 
 
