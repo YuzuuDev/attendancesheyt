@@ -64,19 +64,22 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                         : '',
                   ),
                   trailing: IconButton(
-                    icon: const Icon(Icons.open_in_new),
-                    onPressed: () async {
+                    icon: const Icon(Icons.visibility),
+                    onPressed: () {
                       final url = s['file_url'];
-                      if (url != null) {
-                        final uri = Uri.parse(url);
-                        if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Could not open file")),
-                          );
-                        }
-                      }
+                      if (url == null) return;
+                  
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => SubmissionPreviewScreen(
+                            fileUrl: url,
+                          ),
+                        ),
+                      );
                     },
                   ),
+
                   // 👇 THIS IS THE FUCKING PART YOU ASKED FOR
                   onTap: () {
                     showDialog(
