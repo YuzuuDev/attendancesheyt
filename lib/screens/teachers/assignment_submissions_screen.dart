@@ -2,9 +2,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../services/assignment_service.dart';
 
@@ -18,55 +18,46 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
     super.key,
   });
 
-  bool _isPreviewable(String url) {
-    final u = url.toLowerCase();
-    return u.endsWith('.png') ||
-        u.endsWith('.jpg') ||
-        u.endsWith('.jpeg') ||
-        u.endsWith('.gif') ||
-        u.endsWith('.webp') ||
-        u.endsWith('.mp4') ||
-        u.endsWith('.mov');
+  bool _isImage(String path) {
+    final p = path.toLowerCase();
+    return p.endsWith('.png') ||
+        p.endsWith('.jpg') ||
+        p.endsWith('.jpeg') ||
+        p.endsWith('.gif') ||
+        p.endsWith('.webp');
   }
 
-  /// 🔒 DOWNLOAD FIRST (NO BROWSER, NO SUPABASE UI)
-  Future<File> _downloadToLocal(String url) async {
-    final uri = Uri.parse(url);
-    final client = HttpClient();
-
-    final request = await client.getUrl(uri);
-    final response = await request.close();
-
-    if (response.statusCode != 200) {
-      throw Exception('Download failed');
-    }
-
-    final Uint8List bytes =
-        await consolidateHttpClientResponseBytes(response);
-
-    final dir = await getApplicationDocumentsDirectory();
-    final fileName = uri.pathSegments.last;
-    final file = File('${dir.path}/$fileName');
-
-    await file.writeAsBytes(bytes, flush: true);
-    return file;
-  }
-
-  /// ✅ OPEN LOCAL FILE WITH NATIVE APP
   Future<void> _downloadAndOpen(
     BuildContext context,
-    String url,
+    String storagePath,
   ) async {
     try {
-      final file = await _downloadToLocal(url);
+      final supabase = Supabase.instance.client;
 
-      await launchUrl(
-        Uri.file(file.path),
+      /// 🔥 DOWNLOAD VIA SDK (NOT SIGNED URL)
+      final Uint8List bytes = await supabase.storage
+          .from('assignment_uploads')
+          .download(storagePath);
+
+      final dir = await getApplicationDocumentsDirectory();
+      final fileName = storagePath.split('/').last;
+      final file = File('${dir.path}/$fileName');
+
+      await file.writeAsBytes(bytes, flush: true);
+
+      final uri = Uri.file(file.path);
+
+      final ok = await launchUrl(
+        uri,
         mode: LaunchMode.externalApplication,
       );
-    } catch (_) {
+
+      if (!ok) {
+        throw 'No app found to open file';
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to open file')),
+        SnackBar(content: Text('Failed to open file')),
       );
     }
   }
@@ -79,12 +70,16 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
       appBar: AppBar(title: Text(title)),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: service.getSubmissions(assignmentId),
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final submissions = snap.data ?? [];
+          if (snapshot.hasError) {
+            return Center(child: Text(snapshot.error.toString()));
+          }
+
+          final submissions = snapshot.data ?? [];
           if (submissions.isEmpty) {
             return const Center(child: Text('No submissions yet'));
           }
@@ -94,7 +89,7 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
             itemBuilder: (_, i) {
               final s = submissions[i];
               final profile = s['profile'];
-              final fileUrl = s['file_url'];
+              final storagePath = s['file_path'];
 
               return Card(
                 margin: const EdgeInsets.all(12),
@@ -111,77 +106,29 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
 
-                      /// 🖼 IMAGE / VIDEO PREVIEW
-                      if (fileUrl != null && _isPreviewable(fileUrl))
+                      /// IMAGE PREVIEW ONLY
+                      if (storagePath != null && _isImage(storagePath))
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: Image.network(
-                            fileUrl,
+                            service.getSignedUrl(storagePath),
                             height: 180,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                const Text('Preview failed'),
                           ),
                         ),
 
-                      /// 📄 DOCX / PDF / ZIP → DOWNLOAD & OPEN LOCALLY
-                      if (fileUrl != null && !_isPreviewable(fileUrl))
+                      const SizedBox(height: 8),
+
+                      /// EVERYTHING DOWNLOADS LOCALLY
+                      if (storagePath != null)
                         ElevatedButton.icon(
                           icon: const Icon(Icons.download),
                           label: const Text('Download & Open'),
                           onPressed: () =>
-                              _downloadAndOpen(context, fileUrl),
+                              _downloadAndOpen(context, storagePath),
                         ),
-
-                      const SizedBox(height: 8),
-
-                      /// ✏️ GRADE
-                      TextButton.icon(
-                        icon: const Icon(Icons.edit),
-                        label: const Text('Grade'),
-                        onPressed: () async {
-                          final gradeCtrl = TextEditingController();
-                          final feedbackCtrl = TextEditingController();
-
-                          showDialog(
-                            context: context,
-                            builder: (_) => AlertDialog(
-                              title: const Text('Grade Submission'),
-                              content: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  TextField(
-                                    controller: gradeCtrl,
-                                    keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
-                                        labelText: 'Grade'),
-                                  ),
-                                  TextField(
-                                    controller: feedbackCtrl,
-                                    decoration: const InputDecoration(
-                                        labelText: 'Feedback'),
-                                  ),
-                                ],
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () async {
-                                    await service.gradeSubmission(
-                                      submissionId: s['id'],
-                                      grade: int.parse(gradeCtrl.text),
-                                      feedback: feedbackCtrl.text,
-                                    );
-                                    Navigator.pop(context);
-                                  },
-                                  child: const Text('Save'),
-                                )
-                              ],
-                            ),
-                          );
-                        },
-                      ),
                     ],
                   ),
                 ),
@@ -193,6 +140,7 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
     );
   }
 }
+
 
 
 
