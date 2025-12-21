@@ -18,52 +18,83 @@ class SubmissionPreviewScreen extends StatefulWidget {
 }
 
 class _SubmissionPreviewScreenState extends State<SubmissionPreviewScreen> {
-  bool loading = true;
+  bool loading = false;
   String? error;
 
-  @override
-  void initState() {
-    super.initState();
-    _downloadAndOpen();
+  Future<File> _downloadFile() async {
+    final uri = Uri.parse(widget.fileUrl);
+    final res = await http.get(uri);
+
+    if (res.statusCode != 200) {
+      throw Exception('Download failed');
+    }
+
+    final dir = await getTemporaryDirectory();
+    final fileName = uri.pathSegments.last;
+    final file = File('${dir.path}/$fileName');
+
+    await file.writeAsBytes(res.bodyBytes);
+    return file;
   }
 
-  Future<void> _downloadAndOpen() async {
+  Future<void> _preview() async {
+    setState(() => loading = true);
     try {
-      final uri = Uri.parse(widget.fileUrl);
-      final res = await http.get(uri);
-
-      if (res.statusCode != 200) {
-        throw Exception('Failed to download file');
-      }
-
-      final dir = await getTemporaryDirectory();
-      final fileName = uri.pathSegments.last;
-      final file = File('${dir.path}/$fileName');
-
-      await file.writeAsBytes(res.bodyBytes);
-
+      final file = await _downloadFile();
       await OpenFilex.open(file.path);
-
-      if (mounted) Navigator.pop(context);
     } catch (e) {
-      setState(() {
-        error = e.toString();
-        loading = false;
-      });
+      setState(() => error = e.toString());
+    } finally {
+      setState(() => loading = false);
+    }
+  }
+
+  Future<void> _downloadOnly() async {
+    setState(() => loading = true);
+    try {
+      await _downloadFile();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Downloaded')),
+      );
+    } catch (e) {
+      setState(() => error = e.toString());
+    } finally {
+      setState(() => loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Opening file')),
-      body: Center(
-        child: loading
-            ? const CircularProgressIndicator()
-            : Text(
-                error ?? 'Failed to open file',
-                style: const TextStyle(color: Colors.red),
-              ),
+      appBar: AppBar(title: const Text('Submission')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            if (error != null)
+              Text(error!, style: const TextStyle(color: Colors.red)),
+
+            const Spacer(),
+
+            ElevatedButton.icon(
+              icon: const Icon(Icons.visibility),
+              label: const Text('Preview'),
+              onPressed: loading ? null : _preview,
+            ),
+
+            const SizedBox(height: 12),
+
+            OutlinedButton.icon(
+              icon: const Icon(Icons.download),
+              label: const Text('Download'),
+              onPressed: loading ? null : _downloadOnly,
+            ),
+
+            const Spacer(),
+
+            if (loading) const CircularProgressIndicator(),
+          ],
+        ),
       ),
     );
   }
