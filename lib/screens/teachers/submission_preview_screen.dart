@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:http/http.dart' as http;
 
 class SubmissionPreviewScreen extends StatefulWidget {
   final String fileUrl;
@@ -16,64 +18,53 @@ class SubmissionPreviewScreen extends StatefulWidget {
 }
 
 class _SubmissionPreviewScreenState extends State<SubmissionPreviewScreen> {
-  late final WebViewController _controller;
-
-  bool _isImage(String url) =>
-      url.endsWith('.png') ||
-      url.endsWith('.jpg') ||
-      url.endsWith('.jpeg') ||
-      url.endsWith('.gif') ||
-      url.endsWith('.webp');
-
-  bool _isPdf(String url) => url.endsWith('.pdf');
-
-  bool _isDoc(String url) =>
-      url.endsWith('.doc') || url.endsWith('.docx');
+  bool loading = true;
+  String? error;
 
   @override
   void initState() {
     super.initState();
+    _downloadAndOpen();
+  }
 
-    final uri = _isDoc(widget.fileUrl)
-        ? Uri.parse(
-            'https://docs.google.com/gview?embedded=true&url=${Uri.encodeComponent(widget.fileUrl)}')
-        : Uri.parse(widget.fileUrl);
+  Future<void> _downloadAndOpen() async {
+    try {
+      final uri = Uri.parse(widget.fileUrl);
+      final res = await http.get(uri);
 
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..loadRequest(uri);
+      if (res.statusCode != 200) {
+        throw Exception('Failed to download file');
+      }
+
+      final dir = await getTemporaryDirectory();
+      final fileName = uri.pathSegments.last;
+      final file = File('${dir.path}/$fileName');
+
+      await file.writeAsBytes(res.bodyBytes);
+
+      await OpenFilex.open(file.path);
+
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      setState(() {
+        error = e.toString();
+        loading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        /// ⬇️ DOWNLOAD BUTTON (YOU ASKED FOR IT)
-        Align(
-          alignment: Alignment.centerRight,
-          child: IconButton(
-            icon: const Icon(Icons.download),
-            onPressed: () async {
-              final uri = Uri.parse(widget.fileUrl);
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-            },
-          ),
-        ),
-
-        /// 🖼 IMAGE → REAL INLINE PREVIEW
-        if (_isImage(widget.fileUrl))
-          Expanded(
-            child: InteractiveViewer(
-              child: Image.network(widget.fileUrl),
-            ),
-          )
-
-        /// 📄 PDF / DOCX / ANYTHING ELSE → WEBVIEW
-        else
-          Expanded(
-            child: WebViewWidget(controller: _controller),
-          ),
-      ],
+    return Scaffold(
+      appBar: AppBar(title: const Text('Opening file')),
+      body: Center(
+        child: loading
+            ? const CircularProgressIndicator()
+            : Text(
+                error ?? 'Failed to open file',
+                style: const TextStyle(color: Colors.red),
+              ),
+      ),
     );
   }
 }
