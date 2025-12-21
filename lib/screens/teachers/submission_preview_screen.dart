@@ -17,7 +17,8 @@ class SubmissionPreviewScreen extends StatefulWidget {
       _SubmissionPreviewScreenState();
 }
 
-class _SubmissionPreviewScreenState extends State<SubmissionPreviewScreen> {
+class _SubmissionPreviewScreenState
+    extends State<SubmissionPreviewScreen> {
   bool loading = false;
   String? error;
 
@@ -72,7 +73,10 @@ class _SubmissionPreviewScreenState extends State<SubmissionPreviewScreen> {
         child: Column(
           children: [
             if (error != null)
-              Text(error!, style: const TextStyle(color: Colors.red)),
+              Text(
+                error!,
+                style: const TextStyle(color: Colors.red),
+              ),
 
             const Spacer(),
 
@@ -99,6 +103,7 @@ class _SubmissionPreviewScreenState extends State<SubmissionPreviewScreen> {
     );
   }
 }
+
 
 
 /*import 'package:flutter/material.dart';
