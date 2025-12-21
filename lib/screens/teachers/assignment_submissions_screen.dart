@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:open_filex/open_filex.dart';
 import '../../services/assignment_service.dart';
 
 class AssignmentSubmissionsScreen extends StatelessWidget {
@@ -36,21 +36,21 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
         await consolidateHttpClientResponseBytes(response);
 
     final dir = await getApplicationDocumentsDirectory();
-    final name = uri.pathSegments.last;
+    final name = uri.pathSegments.last.split('?').first;
     final file = File('${dir.path}/$name');
 
     await file.writeAsBytes(bytes, flush: true);
     return file;
   }
 
-  Future<void> _openFile(BuildContext context, String signedUrl) async {
+  Future<void> _downloadAndOpen(
+    BuildContext context,
+    String signedUrl,
+  ) async {
     try {
       final file = await _downloadFile(signedUrl);
-      await launchUrl(
-        Uri.file(file.path),
-        mode: LaunchMode.externalApplication,
-      );
-    } catch (_) {
+      await OpenFilex.open(file.path);
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to open file')),
       );
@@ -102,8 +102,9 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
 
+                      /// IMAGE PREVIEW (IF IMAGE)
                       if (path != null && _isImage(path))
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
@@ -114,16 +115,19 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                           ),
                         ),
 
-                      if (path != null && !_isImage(path))
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.download),
-                          label: const Text('Download & Open'),
-                          onPressed: () =>
-                              _openFile(context, signedUrl),
-                        ),
+                      const SizedBox(height: 8),
+
+                      /// DOWNLOAD & OPEN — FOR ALL FILE TYPES
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.download),
+                        label: const Text('Download & Open'),
+                        onPressed: () =>
+                            _downloadAndOpen(context, signedUrl),
+                      ),
 
                       const SizedBox(height: 12),
 
+                      /// GRADE
                       TextButton.icon(
                         icon: const Icon(Icons.edit),
                         label: const Text('Grade'),
