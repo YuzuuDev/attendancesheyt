@@ -21,15 +21,20 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
         u.endsWith('.webp');
   }
 
-  Future<void> _openExternally(BuildContext context, String url) async {
-    final uri = Uri.parse(url);
+  Future<void> _downloadAndOpen(
+    BuildContext context,
+    String signedUrl,
+  ) async {
+    final uri = Uri.parse(signedUrl);
 
-    if (!await launchUrl(
+    final ok = await launchUrl(
       uri,
       mode: LaunchMode.externalApplication,
-    )) {
+    );
+
+    if (!ok && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to open file")),
+        const SnackBar(content: Text('Failed to open file')),
       );
     }
   }
@@ -53,7 +58,7 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
 
           final submissions = snapshot.data ?? [];
           if (submissions.isEmpty) {
-            return const Center(child: Text("No submissions yet"));
+            return const Center(child: Text('No submissions yet'));
           }
 
           return ListView.builder(
@@ -61,7 +66,7 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
             itemBuilder: (_, i) {
               final s = submissions[i];
               final profile = s['profile'];
-              final fileUrl = s['file_url'];
+              final signedUrl = s['signed_url'];
 
               return Card(
                 margin: const EdgeInsets.all(12),
@@ -70,7 +75,7 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      /// STUDENT
+                      // STUDENT NAME
                       Text(
                         profile?['full_name'] ?? s['student_id'],
                         style: const TextStyle(
@@ -79,93 +84,40 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
 
-                      /// DATE
-                      Text(
-                        s['submitted_at'] != null
-                            ? DateTime.parse(s['submitted_at'])
-                                .toLocal()
-                                .toString()
-                            : '',
-                        style: const TextStyle(fontSize: 12),
-                      ),
+                      // DATE
+                      if (s['submitted_at'] != null)
+                        Text(
+                          DateTime.parse(s['submitted_at'])
+                              .toLocal()
+                              .toString(),
+                          style: const TextStyle(fontSize: 12),
+                        ),
 
                       const SizedBox(height: 12),
 
-                      /// IMAGE → INLINE PREVIEW
-                      if (fileUrl != null && _isImage(fileUrl))
-                        GestureDetector(
-                          onTap: () => _openExternally(context, fileUrl),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              fileUrl,
-                              height: 180,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  const Text("Image failed to load"),
-                            ),
+                      // IMAGE PREVIEW (ONLY IMAGES)
+                      if (_isImage(signedUrl))
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            signedUrl,
+                            height: 180,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const Text('Failed to load image'),
                           ),
                         ),
 
-                      /// NON-IMAGE → OPEN EXTERNALLY (NO DOWNLOAD)
-                      if (fileUrl != null && !_isImage(fileUrl))
-                        TextButton.icon(
-                          icon: const Icon(Icons.open_in_new),
-                          label: const Text("Open File"),
+                      // DOWNLOAD BUTTON (NON-IMAGES)
+                      if (!_isImage(signedUrl))
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.download),
+                          label: const Text('Download & Open'),
                           onPressed: () =>
-                              _openExternally(context, fileUrl),
+                              _downloadAndOpen(context, signedUrl),
                         ),
-
-                      const SizedBox(height: 12),
-
-                      /// GRADE
-                      TextButton.icon(
-                        icon: const Icon(Icons.edit),
-                        label: const Text("Grade"),
-                        onPressed: () {
-                          final gradeCtrl = TextEditingController();
-                          final feedbackCtrl = TextEditingController();
-
-                          showDialog(
-                            context: context,
-                            builder: (_) => AlertDialog(
-                              title: const Text("Grade Submission"),
-                              content: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  TextField(
-                                    controller: gradeCtrl,
-                                    keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
-                                        labelText: "Grade"),
-                                  ),
-                                  TextField(
-                                    controller: feedbackCtrl,
-                                    decoration: const InputDecoration(
-                                        labelText: "Feedback"),
-                                  ),
-                                ],
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () async {
-                                    await service.gradeSubmission(
-                                      submissionId: s['id'],
-                                      grade:
-                                          int.parse(gradeCtrl.text),
-                                      feedback: feedbackCtrl.text,
-                                    );
-                                    Navigator.pop(context);
-                                  },
-                                  child: const Text("Save"),
-                                )
-                              ],
-                            ),
-                          );
-                        },
-                      ),
                     ],
                   ),
                 ),
