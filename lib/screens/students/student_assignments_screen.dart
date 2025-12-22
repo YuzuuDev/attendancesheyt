@@ -1,6 +1,180 @@
 import 'package:flutter/material.dart';
 import '../../services/assignment_service.dart';
 import 'submit_assignment_screen.dart';
+import '../../supabase_client.dart';
+
+class StudentAssignmentsScreen extends StatefulWidget {
+  final String classId;
+
+  const StudentAssignmentsScreen({
+    super.key,
+    required this.classId,
+  });
+
+  @override
+  State<StudentAssignmentsScreen> createState() =>
+      _StudentAssignmentsScreenState();
+}
+
+class _StudentAssignmentsScreenState
+    extends State<StudentAssignmentsScreen> {
+  final AssignmentService _service = AssignmentService();
+  bool loading = true;
+  List<Map<String, dynamic>> assignments = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAssignments();
+  }
+
+  Future<void> _loadAssignments() async {
+    final res = await _service.getAssignments(widget.classId);
+    setState(() {
+      assignments = res;
+      loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Assignments')),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : assignments.isEmpty
+              ? const Center(child: Text('No assignments yet'))
+              : ListView.builder(
+                  itemCount: assignments.length,
+                  itemBuilder: (context, index) {
+                    final a = assignments[index];
+
+                    return Card(
+                      margin: const EdgeInsets.all(10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 6,
+                      child: ListTile(
+                        title: Text(
+                          a['title'],
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        /// 🔽 FUTUREBUILDER INSERTED HERE (REAL-TIME)
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (a['description'] != null &&
+                                a['description'].toString().isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(a['description']),
+                              ),
+
+                            const SizedBox(height: 6),
+
+                            /// 🔥 REAL-TIME SUBMISSION STATUS
+                            FutureBuilder<Map<String, dynamic>?>(
+                              future: _service.getMySubmission(a['id']),
+                              builder: (_, snap) {
+                                if (snap.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Text(
+                                    "Checking submission...",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                    ),
+                                  );
+                                }
+
+                                if (!snap.hasData || snap.data == null) {
+                                  return const Text(
+                                    "❌ Not submitted",
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 12,
+                                    ),
+                                  );
+                                }
+
+                                final sub = snap.data!;
+
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      "✅ Submitted",
+                                      style: TextStyle(
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+
+                                    TextButton(
+                                      child: const Text("Unsubmit"),
+                                      onPressed: () async {
+                                        await _service.unsubmitAssignment(
+                                          assignmentId: a['id'],
+                                          studentId: Supabase
+                                              .instance.client.auth.currentUser!.id,
+                                        );
+                                        setState(() {}); // 🔥 INSTANT REFRESH
+                                      },
+                                    ),
+
+                                    if (sub['grade'] != null)
+                                      Text(
+                                        "Grade: ${sub['grade']}",
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+
+                                    if (sub['feedback'] != null &&
+                                        sub['feedback']
+                                            .toString()
+                                            .isNotEmpty)
+                                      Text(
+                                        "Feedback: ${sub['feedback']}",
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+
+                        /// ✅ SUBMIT BUTTON — UNTOUCHED
+                        trailing: ElevatedButton(
+                          child: const Text('Submit'),
+                          onPressed: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => SubmitAssignmentScreen(
+                                  assignmentId: a['id'],
+                                  title: a['title'],
+                                ),
+                              ),
+                            );
+                            setState(() {}); // 🔥 REFRESH AFTER SUBMIT
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+}
+
+/*import 'package:flutter/material.dart';
+import '../../services/assignment_service.dart';
+import 'submit_assignment_screen.dart';
 
 class StudentAssignmentsScreen extends StatefulWidget {
   final String classId;
@@ -154,4 +328,4 @@ class _StudentAssignmentsScreenState
                 ),
     );
   }
-}
+}*/
