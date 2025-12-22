@@ -249,6 +249,24 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
               child: const Text("Create Class"),
             ),
             const SizedBox(height: 20),
+            // ONLY RELEVANT CHANGES SHOWN — REST OF FILE UNCHANGED
+            // ADD THIS BUTTON ABOVE CLASS LIST
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ParticipationScreen(
+                      classId: null,
+                      className: null,
+                    ),
+                  ),
+                );
+              },
+              child: const Text("Participation"),
+            ),
+
             Expanded(
               child: classes.isEmpty
                   ? const Center(child: Text("No classes"))
@@ -323,7 +341,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                       child: const Text("Assignments"),
                                     ),
                                     // 🔥 THIS IS THE PARTICIPATION ACCESS
-                                    ElevatedButton(
+                                    /*ElevatedButton(
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: Colors.orange,
                                       ),
@@ -339,7 +357,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                           ),
                                         );
                                       },
-                                    ),
+                                    ),*/
                                   ],
                                 ),
                               ],
