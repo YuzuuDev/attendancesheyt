@@ -7,6 +7,7 @@ import 'create_class_screen.dart';
 import 'teacher_qr_screen.dart';
 import 'attendance_history_screen.dart';
 import 'teacher_assignments_screen.dart';
+import 'participation_screen.dart'; 
 
 
 class TeacherDashboard extends StatefulWidget {
@@ -318,6 +319,24 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                         );
                                       },
                                       child: const Text("Assignments"),
+                                    ),
+                                    // 🔥 THIS IS THE PARTICIPATION ACCESS
+                                    ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.orange,
+                                      ),
+                                      child: const Text("Participation"),
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => ParticipationScreen(
+                                              classId: cls['id'],
+                                              className: cls['name'],
+                                            ),
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ],
                                 ),
