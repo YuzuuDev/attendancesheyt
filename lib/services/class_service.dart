@@ -79,6 +79,17 @@ class ClassService {
     return List<Map<String, dynamic>>.from(response);
   }
 
+  //new shit
+  Future<List<Map<String, dynamic>>> getClassStudents(String classId) async {
+    final res = await Supabase.instance.client
+        .from('class_students')
+        .select('student_id, profiles(full_name, participation_points)')
+        .eq('class_id', classId);
+  
+    return List<Map<String, dynamic>>.from(res);
+  }
+
+
   String _generateClassCode() {
     final random = DateTime.now().millisecondsSinceEpoch.remainder(1000000);
     return random.toString().padLeft(6, '0');
