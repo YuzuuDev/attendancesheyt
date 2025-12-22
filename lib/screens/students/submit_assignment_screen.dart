@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -22,7 +23,7 @@ class _SubmitAssignmentScreenState
     extends State<SubmitAssignmentScreen> {
   final AssignmentService service = AssignmentService();
 
-  Uint8List? fileBytes;
+  Uint8List? bytes;
   String? fileName;
   bool loading = false;
 
@@ -31,22 +32,22 @@ class _SubmitAssignmentScreenState
       withData: true,
     );
 
-    if (res != null) {
+    if (res != null && res.files.single.bytes != null) {
       setState(() {
-        fileBytes = res.files.single.bytes;
+        bytes = res.files.single.bytes;
         fileName = res.files.single.name;
       });
     }
   }
 
   Future<void> _submit() async {
-    if (fileBytes == null || fileName == null) return;
+    if (bytes == null || fileName == null) return;
 
     setState(() => loading = true);
 
     final err = await service.submitAssignment(
       assignmentId: widget.assignmentId,
-      fileBytes: fileBytes!,
+      fileBytes: bytes!,
       fileName: fileName!,
     );
 
@@ -73,15 +74,12 @@ class _SubmitAssignmentScreenState
               onPressed: _pickFile,
               label: const Text("Pick File"),
             ),
-
             if (fileName != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(fileName!),
               ),
-
             const SizedBox(height: 20),
-
             loading
                 ? const CircularProgressIndicator()
                 : ElevatedButton(
