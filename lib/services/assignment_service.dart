@@ -223,7 +223,16 @@ class AssignmentService {
       if (isLocked != null) 'is_locked': isLocked,
     }).eq('id', assignmentId);
   }
-
+  Future<void> unsubmit({
+    required String assignmentId,
+    required String studentId,
+  }) async {
+    await _supabase
+        .from('assignment_submissions')
+        .delete()
+        .eq('assignment_id', assignmentId)
+        .eq('student_id', studentId);
+  }
   Future<void> gradeSubmission({
     required String submissionId,
     required int grade,
