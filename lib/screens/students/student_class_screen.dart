@@ -1,4 +1,59 @@
 import 'package:flutter/material.dart';
+import 'student_assignments_screen.dart';
+import 'student_qr_scan_screen.dart';
+
+class StudentClassScreen extends StatelessWidget {
+  final String classId;
+  final String className;
+
+  const StudentClassScreen({
+    required this.classId,
+    required this.className,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(className)),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            ElevatedButton.icon(
+              icon: const Icon(Icons.qr_code_scanner),
+              label: const Text("Scan Attendance QR"),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        StudentQRScanScreen(classId: classId),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              child: const Text("View Assignments"),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        StudentAssignmentsScreen(classId: classId),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/*import 'package:flutter/material.dart';
 import '../../supabase_client.dart';
 import '../../services/participation_service.dart';
 import 'student_assignments_screen.dart';
@@ -93,4 +148,4 @@ class _StudentClassScreenState extends State<StudentClassScreen> {
       ),
     );
   }
-}
+}*/
