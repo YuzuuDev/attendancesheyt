@@ -3,11 +3,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class ParticipationService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// ===============================
-  /// STUDENT SIDE
-  /// ===============================
+  // ===============================
+  // STUDENT SIDE
+  // ===============================
 
-  /// Used by StudentParticipationWidget
   Future<int> getStudentPoints(String studentId) async {
     final res = await _supabase
         .from('profiles')
@@ -18,11 +17,10 @@ class ParticipationService {
     return res?['participation_points'] ?? 0;
   }
 
-  /// ===============================
-  /// TEACHER SIDE
-  /// ===============================
+  // ===============================
+  // TEACHER SIDE
+  // ===============================
 
-  /// Get students enrolled in a class
   Future<List<Map<String, dynamic>>> getClassStudents(String classId) async {
     final res = await _supabase
         .from('class_students')
@@ -32,25 +30,41 @@ class ParticipationService {
     return List<Map<String, dynamic>>.from(res);
   }
 
-  /// Add or deduct participation points
-  Future<void> updatePoints({
+  /// 🔥 THIS IS WHAT WAS MISSING
+  Future<void> addPoints({
+    required String classId,
     required String studentId,
-    required int delta,
+    required int points,
+    required String reason,
   }) async {
+    final teacherId = _supabase.auth.currentUser!.id;
+
+    // 1️⃣ Get current points
     final profile = await _supabase
         .from('profiles')
         .select('participation_points')
         .eq('id', studentId)
         .maybeSingle();
 
-    final current = profile?['participation_points'] ?? 0;
+    final currentPoints = profile?['participation_points'] ?? 0;
+    final newPoints = currentPoints + points;
 
-    await _supabase.from('profiles').update({
-      'participation_points': current + delta,
-    }).eq('id', studentId);
+    // 2️⃣ Update total points
+    await _supabase
+        .from('profiles')
+        .update({'participation_points': newPoints})
+        .eq('id', studentId);
+
+    // 3️⃣ Log participation action
+    await _supabase.from('participation_logs').insert({
+      'class_id': classId,
+      'student_id': studentId,
+      'teacher_id': teacherId,
+      'points': points,
+      'reason': reason,
+    });
   }
 }
-
 
 /*import 'package:supabase_flutter/supabase_flutter.dart';
 
