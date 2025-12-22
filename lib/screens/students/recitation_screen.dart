@@ -1,74 +1,67 @@
 import 'package:flutter/material.dart';
 import '../../services/recitation_service.dart';
 
-class RecitationScreen extends StatelessWidget {
+class RecitationScreen extends StatefulWidget {
   final String assignmentId;
-
   const RecitationScreen({super.key, required this.assignmentId});
 
   @override
+  State<RecitationScreen> createState() => _RecitationScreenState();
+}
+
+class _RecitationScreenState extends State<RecitationScreen> {
+  final service = RecitationService();
+  Map<String, String> answers = {};
+
+  @override
   Widget build(BuildContext context) {
-    final service = RecitationService();
-
     return Scaffold(
-      appBar: AppBar(title: const Text("Recitation")),
+      appBar: AppBar(title: const Text('Recitation')),
       body: FutureBuilder(
-        future: service.getQuestions(assignmentId),
+        future: service.getQuestions(widget.assignmentId),
         builder: (_, snap) {
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          if (!snap.hasData) return const Center(child: CircularProgressIndicator());
 
-          final questions = snap.data as List<Map<String, dynamic>>;
-
-          if (questions.isEmpty) {
-            return const Center(child: Text("No questions"));
-          }
-
-          return ListView.builder(
-            itemCount: questions.length,
-            itemBuilder: (_, i) {
-              final q = questions[i];
-              final ctrl = TextEditingController();
-
+          final questions = snap.data!;
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: questions.map((q) {
               return Card(
-                margin: const EdgeInsets.all(12),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        q['question'],
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
+                      Text(q['question_text'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+
+                      if (q['type'] == 'mcq')
+                        ...List<String>.from(q['choices']).map((c) {
+                          return RadioListTile<String>(
+                            value: c,
+                            groupValue: answers[q['id']],
+                            title: Text(c),
+                            onChanged: (v) {
+                              setState(() => answers[q['id']] = v!);
+                            },
+                          );
+                        }),
+
+                      if (q['type'] == 'text')
+                        TextField(
+                          onChanged: (v) => answers[q['id']] = v,
+                          decoration: const InputDecoration(labelText: 'Your Answer'),
                         ),
-                      ),
-                      const SizedBox(height: 8),
 
-                      if (q['question_type'] == 'text')
-                        TextField(controller: ctrl),
-
-                      if (q['question_type'] == 'mcq')
-                        ...(q['recitation_choices'] as List)
-                            .map((c) => RadioListTile(
-                                  value: c['choice_text'],
-                                  groupValue: ctrl.text,
-                                  onChanged: (v) => ctrl.text = v!,
-                                  title: Text(c['choice_text']),
-                                )),
-
-                      const SizedBox(height: 8),
                       ElevatedButton(
-                        child: const Text("Submit"),
+                        child: const Text('Submit'),
                         onPressed: () async {
                           await service.submitAnswer(
                             questionId: q['id'],
-                            answer: ctrl.text,
+                            answer: answers[q['id']] ?? '',
                           );
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text("Answer submitted")),
+                            const SnackBar(content: Text('Answer submitted')),
                           );
                         },
                       ),
@@ -76,7 +69,7 @@ class RecitationScreen extends StatelessWidget {
                   ),
                 ),
               );
-            },
+            }).toList(),
           );
         },
       ),
