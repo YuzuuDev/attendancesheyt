@@ -44,16 +44,21 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Participation - ${widget.className}")),
+      appBar:
+          AppBar(title: Text("Participation - ${widget.className}")),
       body: Column(
         children: [
           DropdownButton<String>(
             value: reason,
             items: const [
-              DropdownMenuItem(value: 'recitation', child: Text('Recitation')),
-              DropdownMenuItem(value: 'activity', child: Text('Activity')),
-              DropdownMenuItem(value: 'lesson', child: Text('Lesson')),
-              DropdownMenuItem(value: 'forum', child: Text('Forum')),
+              DropdownMenuItem(
+                  value: 'recitation', child: Text('Recitation')),
+              DropdownMenuItem(
+                  value: 'activity', child: Text('Activity')),
+              DropdownMenuItem(
+                  value: 'lesson', child: Text('Lesson')),
+              DropdownMenuItem(
+                  value: 'forum', child: Text('Forum')),
             ],
             onChanged: (v) => setState(() => reason = v!),
           ),
@@ -63,6 +68,7 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
               itemBuilder: (_, i) {
                 final s = students[i];
                 final profile = s['profiles'];
+
                 return ListTile(
                   title: Text(profile['full_name']),
                   subtitle: Text(
@@ -72,15 +78,18 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.remove),
-                        onPressed: () => _apply(s['student_id'], -1),
+                        onPressed: () =>
+                            _apply(s['student_id'], -1),
                       ),
                       IconButton(
                         icon: const Icon(Icons.add),
-                        onPressed: () => _apply(s['student_id'], 1),
+                        onPressed: () =>
+                            _apply(s['student_id'], 1),
                       ),
                       IconButton(
                         icon: const Icon(Icons.exposure_plus_2),
-                        onPressed: () => _apply(s['student_id'], 2),
+                        onPressed: () =>
+                            _apply(s['student_id'], 2),
                       ),
                     ],
                   ),
