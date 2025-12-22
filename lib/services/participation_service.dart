@@ -22,12 +22,28 @@ class ParticipationService {
   // ===============================
 
   Future<List<Map<String, dynamic>>> getClassStudents(String classId) async {
+    // 1️⃣ Get enrolled student IDs
     final res = await _supabase
         .from('class_students')
-        .select('student_id, profiles(id, full_name, participation_points)')
+        .select('student_id')
         .eq('class_id', classId);
-
-    return List<Map<String, dynamic>>.from(res);
+  
+    final students = List<Map<String, dynamic>>.from(res);
+  
+    // 2️⃣ Manually attach profiles (PROVEN WORKING PATTERN)
+    for (int i = 0; i < students.length; i++) {
+      final studentId = students[i]['student_id'];
+  
+      final profile = await _supabase
+          .from('profiles')
+          .select('id, full_name, participation_points')
+          .eq('id', studentId)
+          .maybeSingle();
+  
+      students[i]['profiles'] = profile;
+    }
+  
+    return students;
   }
 
   /// 🔥 THIS IS WHAT WAS MISSING
