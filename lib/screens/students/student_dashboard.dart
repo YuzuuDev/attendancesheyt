@@ -7,7 +7,7 @@ import '../login_screen.dart';
 import 'student_qr_scan_screen.dart';
 import 'student_assignments_screen.dart';
 import 'student_class_screen.dart'; // ✅ CLASS HOME
-import 'student_participation_widget.dart';
+//import 'student_participation_widget.dart';
 
 
 class StudentDashboard extends StatefulWidget {
@@ -91,9 +91,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            StudentParticipationWidget(),
-            const SizedBox(height: 16),
-
             // ✅ JOIN CLASS ONLY
             ElevatedButton.icon(
               icon: const Icon(Icons.add),
