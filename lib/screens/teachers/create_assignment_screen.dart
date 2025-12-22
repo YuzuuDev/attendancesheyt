@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../services/assignment_service.dart';
@@ -17,8 +17,9 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
   final titleCtrl = TextEditingController();
   final descCtrl = TextEditingController();
   DateTime? dueDate;
-  File? instructionFile;
-  String type = 'activity';
+
+  Uint8List? instructionBytes;
+  String? instructionName;
 
   @override
   Widget build(BuildContext context) {
@@ -36,32 +37,21 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
             icon: const Icon(Icons.attach_file),
             label: const Text("Attach Instruction File"),
             onPressed: () async {
-              final res = await FilePicker.platform.pickFiles();
+              final res = await FilePicker.platform.pickFiles(withData: true);
               if (res != null) {
-                setState(() => instructionFile = File(res.files.single.path!));
+                setState(() {
+                  instructionBytes = res.files.single.bytes;
+                  instructionName = res.files.single.name;
+                });
               }
             },
           ),
 
-          if (instructionFile != null)
+          if (instructionName != null)
             Padding(
               padding: const EdgeInsets.only(top: 6),
-              child: Text(instructionFile!.path.split('/').last),
+              child: Text(instructionName!),
             ),
-
-          const SizedBox(height: 12),
-
-          ElevatedButton(
-            child: const Text("Pick Due Date"),
-            onPressed: () async {
-              final d = await showDatePicker(
-                context: context,
-                firstDate: DateTime.now(),
-                lastDate: DateTime(2100),
-              );
-              if (d != null) setState(() => dueDate = d);
-            },
-          ),
 
           const SizedBox(height: 20),
 
@@ -72,8 +62,9 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                 title: titleCtrl.text,
                 description: descCtrl.text,
                 dueDate: dueDate,
-                assignmentType: type,
-                instructionFile: instructionFile,
+                assignmentType: 'activity',
+                instructionBytes: instructionBytes,
+                instructionName: instructionName,
               );
               Navigator.pop(context);
             },
@@ -84,6 +75,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
     );
   }
 }
+
 
 /*import 'package:flutter/material.dart';
 import '../../services/assignment_service.dart';
