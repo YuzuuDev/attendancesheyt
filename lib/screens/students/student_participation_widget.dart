@@ -30,8 +30,10 @@ class _StudentParticipationWidgetState
     return Card(
       child: ListTile(
         title: const Text("Participation Points"),
-        trailing: Text(points.toString(),
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        trailing: Text(
+          points.toString(),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
