@@ -1,26 +1,14 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ParticipationService {
-  final _supabase = Supabase.instance.client;
+  final SupabaseClient _supabase = Supabase.instance.client;
 
-  Future<void> addPoints({
-    required String studentId,
-    required int delta,
-  }) async {
-    final res = await _supabase
-        .from('profiles')
-        .select('participation_points')
-        .eq('id', studentId)
-        .single();
+  /// ===============================
+  /// STUDENT SIDE
+  /// ===============================
 
-    final current = res['participation_points'] ?? 0;
-
-    await _supabase.from('profiles').update({
-      'participation_points': current + delta,
-    }).eq('id', studentId);
-  }
-
-  Future<int> getPoints(String studentId) async {
+  /// Used by StudentParticipationWidget
+  Future<int> getStudentPoints(String studentId) async {
     final res = await _supabase
         .from('profiles')
         .select('participation_points')
@@ -29,7 +17,40 @@ class ParticipationService {
 
     return res?['participation_points'] ?? 0;
   }
+
+  /// ===============================
+  /// TEACHER SIDE
+  /// ===============================
+
+  /// Get students enrolled in a class
+  Future<List<Map<String, dynamic>>> getClassStudents(String classId) async {
+    final res = await _supabase
+        .from('class_students')
+        .select('student_id, profiles(id, full_name, participation_points)')
+        .eq('class_id', classId);
+
+    return List<Map<String, dynamic>>.from(res);
+  }
+
+  /// Add or deduct participation points
+  Future<void> updatePoints({
+    required String studentId,
+    required int delta,
+  }) async {
+    final profile = await _supabase
+        .from('profiles')
+        .select('participation_points')
+        .eq('id', studentId)
+        .maybeSingle();
+
+    final current = profile?['participation_points'] ?? 0;
+
+    await _supabase.from('profiles').update({
+      'participation_points': current + delta,
+    }).eq('id', studentId);
+  }
 }
+
 
 /*import 'package:supabase_flutter/supabase_flutter.dart';
 
