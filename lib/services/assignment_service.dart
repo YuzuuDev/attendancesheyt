@@ -6,20 +6,20 @@ class AssignmentService {
 
   /* =============================== ASSIGNMENTS =============================== */
 
-  // 🔥 ADD: instruction file support (NO REMOVALS)
   Future<void> createAssignment({
     required String classId,
     required String title,
     String? description,
     DateTime? dueDate,
     required String assignmentType,
-    File? instructionFile, // ✅ ADDED
+    File? instructionFile, // ✅ ADD
   }) async {
     String? instructionPath;
 
+    // ✅ UPLOAD INSTRUCTION FILE (TEACHER)
     if (instructionFile != null) {
-      final fileName = instructionFile.path.split('/').last;
-      instructionPath = 'instructions/$classId/$fileName';
+      final name = instructionFile.path.split('/').last;
+      instructionPath = 'instructions/$classId/$name';
 
       await _supabase.storage
           .from('assignment_instructions')
@@ -37,7 +37,7 @@ class AssignmentService {
       'description': description,
       'due_date': dueDate?.toIso8601String(),
       'assignment_type': assignmentType,
-      'instruction_file_url': instructionPath, // ✅ ADDED
+      'instruction_file_url': instructionPath, // ✅ ADD
     });
   }
 
@@ -48,17 +48,18 @@ class AssignmentService {
         .eq('class_id', classId)
         .order('created_at');
 
-    final List<Map<String, dynamic>> list =
-        List<Map<String, dynamic>>.from(res);
+    final list = List<Map<String, dynamic>>.from(res);
 
-    // 🔥 ADD: signed URL for instruction file
-    for (int i = 0; i < list.length; i++) {
-      final path = list[i]['instruction_file_url'];
-      if (path != null) {
-        list[i]['instruction_signed_url'] =
+    // ✅ SIGNED URL FOR INSTRUCTION FILE
+    for (final a in list) {
+      if (a['instruction_file_url'] != null) {
+        a['instruction_signed_url'] =
             await _supabase.storage
                 .from('assignment_instructions')
-                .createSignedUrl(path, 60 * 15);
+                .createSignedUrl(
+                  a['instruction_file_url'],
+                  60 * 15,
+                );
       }
     }
 
@@ -78,16 +79,12 @@ class AssignmentService {
     try {
       final userId = _supabase.auth.currentUser!.id;
 
-      // 🔥 ADD: due date enforcement
+      // ✅ CHECK DUE DATE + LOCK
       final assignment = await _supabase
           .from('assignments')
           .select('is_locked, due_date')
           .eq('id', assignmentId)
           .single();
-
-      if (assignment['is_locked'] == true) {
-        return "Submissions are closed";
-      }
 
       if (assignment['due_date'] != null &&
           DateTime.parse(assignment['due_date']).isBefore(DateTime.now())) {
@@ -96,6 +93,10 @@ class AssignmentService {
             .update({'is_locked': true})
             .eq('id', assignmentId);
         return "Assignment is past due";
+      }
+
+      if (assignment['is_locked'] == true) {
+        return "Submissions are closed";
       }
 
       final fileName = file.path.split('/').last;
@@ -119,18 +120,14 @@ class AssignmentService {
     }
   }
 
-  // 🔥 ADD: UNSUBMIT (student OR teacher)
-  Future<void> unsubmitAssignment({
-    required String assignmentId,
-    required String studentId,
-  }) async {
+  /// ✅ REQUIRED BY YOUR UI — POSITIONAL, NOT NAMED
+  Future<void> unsubmit(String assignmentId, String studentId) async {
+    // ✅ CHECK IF STILL ALLOWED
     final assignment = await _supabase
         .from('assignments')
-        .select('due_date, is_locked')
+        .select('is_locked, due_date')
         .eq('id', assignmentId)
         .single();
-
-    if (assignment['is_locked'] == true) return;
 
     if (assignment['due_date'] != null &&
         DateTime.parse(assignment['due_date']).isBefore(DateTime.now())) {
@@ -140,6 +137,8 @@ class AssignmentService {
           .eq('id', assignmentId);
       return;
     }
+
+    if (assignment['is_locked'] == true) return;
 
     await _supabase
         .from('assignment_submissions')
@@ -223,16 +222,7 @@ class AssignmentService {
       if (isLocked != null) 'is_locked': isLocked,
     }).eq('id', assignmentId);
   }
-  Future<void> unsubmit({
-    required String assignmentId,
-    required String studentId,
-  }) async {
-    await _supabase
-        .from('assignment_submissions')
-        .delete()
-        .eq('assignment_id', assignmentId)
-        .eq('student_id', studentId);
-  }
+
   Future<void> gradeSubmission({
     required String submissionId,
     required int grade,
@@ -244,6 +234,7 @@ class AssignmentService {
     }).eq('id', submissionId);
   }
 }
+
 
 /*import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
