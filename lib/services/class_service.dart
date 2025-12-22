@@ -17,26 +17,34 @@ class ClassService {
     }
   }
 
-  Future<String?> joinClass(String code, String studentId) async {
-    try {
-      final cls = await _supabase
-          .from('classes')
-          .select('id')
-          .eq('code', code)
-          .maybeSingle();
-
-      if (cls == null) return "Class not found";
-
-      await _supabase.from('class_students').insert({
-        'class_id': cls['id'],
-        'student_id': studentId,
-      });
-
-      return null;
-    } catch (e) {
-      return e.toString();
+  Future<String?> joinClass(String code, String userId) async {
+    // 🔒 BLOCK TEACHERS
+    final profile = await _supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+  
+    if (profile == null || profile['role'] != 'student') {
+      return "Only students can join classes";
     }
+  
+    final cls = await _supabase
+        .from('classes')
+        .select('id')
+        .eq('code', code)
+        .maybeSingle();
+  
+    if (cls == null) return "Class not found";
+  
+    await _supabase.from('class_students').insert({
+      'class_id': cls['id'],
+      'student_id': userId,
+    });
+  
+    return null;
   }
+
 
   /// ✅ Fixed: manually fetch profiles to avoid missing foreign key relationship
   Future<List<Map<String, dynamic>>> getStudents(String classId) async {
