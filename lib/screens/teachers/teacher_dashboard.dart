@@ -273,9 +273,20 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
                                     ElevatedButton(
-                                      onPressed: () => _showStudents(cls['id'], cls['name']),
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => ParticipationScreen(
+                                              classId: cls['id'],
+                                              className: cls['name'],
+                                            ),
+                                          ),
+                                        );
+                                      },
                                       child: const Text("View Students"),
                                     ),
+
                                     const SizedBox(height: 6),
                                     ElevatedButton(
                                       onPressed: () {
