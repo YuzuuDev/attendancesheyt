@@ -1,113 +1,4 @@
-
 import 'package:flutter/material.dart';
-import '../../services/class_service.dart';
-import '../../services/participation_service.dart';
-import '../../supabase_client.dart';
-import 'student_class_screen.dart';
-import 'join_class_screen.dart';
-
-class StudentDashboard extends StatefulWidget {
-  @override
-  State<StudentDashboard> createState() => _StudentDashboardState();
-}
-
-class _StudentDashboardState extends State<StudentDashboard> {
-  final ClassService classService = ClassService();
-  final ParticipationService participationService = ParticipationService();
-
-  List<Map<String, dynamic>> classes = [];
-  int points = 0;
-  bool loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final id = SupabaseClientInstance.supabase.auth.currentUser!.id;
-    classes = await classService.getStudentClasses(id);
-    points = await participationService.getStudentPoints(id);
-    setState(() => loading = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(title: const Text("Student Dashboard")),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // ✅ GLOBAL PARTICIPATION (ONCE)
-            Card(
-              child: ListTile(
-                title: const Text("Participation Points"),
-                trailing: Text(
-                  points.toString(),
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => JoinClassScreen()),
-                ).then((_) => _load());
-              },
-              child: const Text("Join Class"),
-            ),
-
-            const SizedBox(height: 12),
-
-            Expanded(
-              child: classes.isEmpty
-                  ? const Center(child: Text("No classes joined"))
-                  : ListView.builder(
-                      itemCount: classes.length,
-                      itemBuilder: (_, i) {
-                        final c = classes[i];
-                        return Card(
-                          child: ListTile(
-                            title: Text(c['name']),
-                            subtitle: Text("Code: ${c['code']}"),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => StudentClassScreen(
-                                    classId: c['id'],
-                                    className: c['name'],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/*import 'package:flutter/material.dart';
 import '../../services/class_service.dart';
 import '../../services/auth_service.dart';
 import '../../supabase_client.dart';
@@ -115,9 +6,10 @@ import 'join_class_screen.dart';
 import '../login_screen.dart';
 import 'student_qr_scan_screen.dart';
 import 'student_assignments_screen.dart';
-import 'student_class_screen.dart'; // ✅ CLASS HOME
-//import 'student_participation_widget.dart';
+import 'student_class_screen.dart';
 
+// ✅ CLASS HOME
+// import 'student_participation_widget.dart';
 
 class StudentDashboard extends StatefulWidget {
   @override
@@ -127,6 +19,7 @@ class StudentDashboard extends StatefulWidget {
 class _StudentDashboardState extends State<StudentDashboard> {
   final ClassService classService = ClassService();
   final AuthService authService = AuthService();
+
   List<Map<String, dynamic>> classes = [];
   bool isLoading = true;
 
@@ -139,8 +32,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
   Future<void> _loadClasses() async {
     final studentId =
         SupabaseClientInstance.supabase.auth.currentUser!.id;
-
     final result = await classService.getStudentClasses(studentId);
+
     setState(() {
       classes = result;
       isLoading = false;
@@ -225,15 +118,19 @@ class _StudentDashboardState extends State<StudentDashboard> {
                         final classId = classes[index]['class_id'];
 
                         return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          margin:
+                              const EdgeInsets.symmetric(vertical: 8),
                           child: ListTile(
-                            leading: const Icon(Icons.class_),
+                            leading:
+                                const Icon(Icons.class_),
                             title: Text(
                               cls['name'],
                               style: const TextStyle(
-                                  fontWeight: FontWeight.bold),
+                                  fontWeight:
+                                      FontWeight.bold),
                             ),
-                            subtitle: Text("Code: ${cls['code']}"),
+                            subtitle:
+                                Text("Code: ${cls['code']}"),
 
                             // 🔥 THIS IS THE ACCESS POINT
                             // TAP CLASS → CLASS HOME
@@ -241,7 +138,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => StudentClassScreen(
+                                  builder: (_) =>
+                                      StudentClassScreen(
                                     classId: classId,
                                     className: cls['name'],
                                   ),
@@ -249,35 +147,43 @@ class _StudentDashboardState extends State<StudentDashboard> {
                               );
                             },
 
-                            // OPTIONAL QUICK ACTIONS (still class-locked)
+                            // OPTIONAL QUICK ACTIONS
                             trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
+                              mainAxisSize:
+                                  MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon: const Icon(Icons.assignment),
-                                  tooltip: "Assignments",
+                                  icon: const Icon(
+                                      Icons.assignment),
+                                  tooltip:
+                                      "Assignments",
                                   onPressed: () {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) =>
                                             StudentAssignmentsScreen(
-                                          classId: classId,
+                                          classId:
+                                              classId,
                                         ),
                                       ),
                                     );
                                   },
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.qr_code_scanner),
-                                  tooltip: "Scan Attendance",
+                                  icon: const Icon(
+                                      Icons
+                                          .qr_code_scanner),
+                                  tooltip:
+                                      "Scan Attendance",
                                   onPressed: () {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) =>
                                             StudentQRScanScreen(
-                                          classId: classId,
+                                          classId:
+                                              classId,
                                         ),
                                       ),
                                     );
@@ -295,4 +201,4 @@ class _StudentDashboardState extends State<StudentDashboard> {
       ),
     );
   }
-}*/
+}
