@@ -43,4 +43,25 @@ class RecitationService {
     required String questionId,
     required String answer,
   }) async {
-    final user = supabase.auth.currentU
+    final user = supabase.auth.currentUser!;
+
+    await supabase.from('recitation_answers').upsert({
+      'question_id': questionId,
+      'student_id': user.id,
+      'answer': answer,
+    });
+  }
+
+  // ======================
+  // TEACHER VIEW
+  // ======================
+
+  Future<List<Map<String, dynamic>>> getAnswers(String questionId) async {
+    final res = await supabase
+        .from('recitation_answers')
+        .select('answer, is_correct, points_awarded, profiles(full_name)')
+        .eq('question_id', questionId);
+
+    return List<Map<String, dynamic>>.from(res);
+  }
+}
