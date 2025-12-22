@@ -14,10 +14,11 @@ class CreateAssignmentScreen extends StatefulWidget {
 
 class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
   final service = AssignmentService();
+
   final titleCtrl = TextEditingController();
   final descCtrl = TextEditingController();
-  DateTime? dueDate;
 
+  DateTime? dueDate;
   Uint8List? instructionBytes;
   String? instructionName;
 
@@ -28,8 +29,14 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: "Title")),
-          TextField(controller: descCtrl, decoration: const InputDecoration(labelText: "Description")),
+          TextField(
+            controller: titleCtrl,
+            decoration: const InputDecoration(labelText: "Title"),
+          ),
+          TextField(
+            controller: descCtrl,
+            decoration: const InputDecoration(labelText: "Description"),
+          ),
 
           const SizedBox(height: 12),
 
@@ -37,8 +44,11 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
             icon: const Icon(Icons.attach_file),
             label: const Text("Attach Instruction File"),
             onPressed: () async {
-              final res = await FilePicker.platform.pickFiles(withData: true);
-              if (res != null) {
+              final res = await FilePicker.platform.pickFiles(
+                withData: true,
+              );
+
+              if (res != null && res.files.single.bytes != null) {
                 setState(() {
                   instructionBytes = res.files.single.bytes;
                   instructionName = res.files.single.name;
@@ -52,6 +62,20 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
               padding: const EdgeInsets.only(top: 6),
               child: Text(instructionName!),
             ),
+
+          const SizedBox(height: 12),
+
+          ElevatedButton(
+            child: const Text("Pick Due Date"),
+            onPressed: () async {
+              final d = await showDatePicker(
+                context: context,
+                firstDate: DateTime.now(),
+                lastDate: DateTime(2100),
+              );
+              if (d != null) setState(() => dueDate = d);
+            },
+          ),
 
           const SizedBox(height: 20),
 
@@ -69,12 +93,13 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
               Navigator.pop(context);
             },
             child: const Text("Create Assignment"),
-          )
+          ),
         ],
       ),
     );
   }
 }
+
 
 
 /*import 'package:flutter/material.dart';
