@@ -3,7 +3,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AuthService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  Future<String?> signUp(String email, String password, String fullName, String role) async {
+  Future<String?> signUp(
+    String email,
+    String password,
+    String fullName,
+    String role,
+  ) async {
     try {
       final response = await _supabase.auth.signUp(
         email: email,
@@ -11,6 +16,7 @@ class AuthService {
       );
 
       final user = response.user;
+
       if (user != null) {
         await _supabase.from('profiles').insert({
           'id': user.id,
@@ -25,12 +31,14 @@ class AuthService {
       return e.toString();
     }
   }
+
   Future<String?> signIn(String email, String password) async {
     try {
       final response = await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
+
       return response.user == null ? "Login failed" : null;
     } catch (e) {
       return e.toString();
