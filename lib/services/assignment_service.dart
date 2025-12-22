@@ -1,10 +1,10 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AssignmentService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  /* ================= ASSIGNMENTS ================= */
+  /* =============================== ASSIGNMENTS =============================== */
 
   Future<void> createAssignment({
     required String classId,
@@ -12,20 +12,20 @@ class AssignmentService {
     String? description,
     DateTime? dueDate,
     required String assignmentType,
-    File? instructionFile,
+    Uint8List? instructionBytes,
+    String? instructionName,
   }) async {
     String? instructionPath;
 
-    if (instructionFile != null) {
-      final name = instructionFile.path.split('/').last;
+    if (instructionBytes != null && instructionName != null) {
       instructionPath =
-          'instructions/$classId/${DateTime.now().millisecondsSinceEpoch}_$name';
+          'instructions/$classId/${DateTime.now().millisecondsSinceEpoch}_$instructionName';
 
       await _supabase.storage
           .from('assignment_instructions')
-          .upload(
+          .uploadBinary(
             instructionPath,
-            instructionFile,
+            instructionBytes,
             fileOptions: const FileOptions(upsert: true),
           );
     }
@@ -42,39 +42,33 @@ class AssignmentService {
     });
   }
 
-  /// ✅ EDIT ASSIGNMENT + REPLACE INSTRUCTION FILE
-  Future<void> updateAssignment({
+  /// ✅ TEACHER — UPDATE / REPLACE INSTRUCTION FILE
+  Future<void> updateInstructionFile({
     required String assignmentId,
-    String? title,
-    String? description,
-    DateTime? dueDate,
-    bool? isLocked,
-    File? newInstructionFile,
-    String? classId,
+    required Uint8List bytes,
+    required String fileName,
   }) async {
-    String? newPath;
+    final assignment = await _supabase
+        .from('assignments')
+        .select('class_id')
+        .eq('id', assignmentId)
+        .single();
 
-    if (newInstructionFile != null && classId != null) {
-      final name = newInstructionFile.path.split('/').last;
-      newPath =
-          'instructions/$classId/${DateTime.now().millisecondsSinceEpoch}_$name';
+    final path =
+        'instructions/${assignment['class_id']}/${DateTime.now().millisecondsSinceEpoch}_$fileName';
 
-      await _supabase.storage
-          .from('assignment_instructions')
-          .upload(
-            newPath,
-            newInstructionFile,
-            fileOptions: const FileOptions(upsert: true),
-          );
-    }
+    await _supabase.storage
+        .from('assignment_instructions')
+        .uploadBinary(
+          path,
+          bytes,
+          fileOptions: const FileOptions(upsert: true),
+        );
 
-    await _supabase.from('assignments').update({
-      if (title != null) 'title': title,
-      if (description != null) 'description': description,
-      if (dueDate != null) 'due_date': dueDate.toIso8601String(),
-      if (isLocked != null) 'is_locked': isLocked,
-      if (newPath != null) 'instruction_file_url': newPath,
-    }).eq('id', assignmentId);
+    await _supabase
+        .from('assignments')
+        .update({'instruction_file_url': path})
+        .eq('id', assignmentId);
   }
 
   Future<List<Map<String, dynamic>>> getAssignments(String classId) async {
@@ -91,21 +85,19 @@ class AssignmentService {
         a['instruction_signed_url'] =
             await _supabase.storage
                 .from('assignment_instructions')
-                .createSignedUrl(
-                  a['instruction_file_url'],
-                  60 * 15,
-                );
+                .createSignedUrl(a['instruction_file_url'], 900);
       }
     }
 
     return list;
   }
 
-  /* ================= SUBMISSIONS ================= */
+  /* =============================== SUBMISSIONS =============================== */
 
   Future<String?> submitAssignment({
     required String assignmentId,
-    required File file,
+    required Uint8List fileBytes,
+    required String fileName,
   }) async {
     final userId = _supabase.auth.currentUser!.id;
 
@@ -119,22 +111,14 @@ class AssignmentService {
       return "Submissions are closed";
     }
 
-    if (assignment['due_date'] != null &&
-        DateTime.parse(assignment['due_date']).isBefore(DateTime.now())) {
-      await _supabase
-          .from('assignments')
-          .update({'is_locked': true})
-          .eq('id', assignmentId);
-      return "Assignment is past due";
-    }
-
-    final name = file.path.split('/').last;
     final path =
-        'submissions/$assignmentId/$userId/${DateTime.now().millisecondsSinceEpoch}_$name';
+        'submissions/$assignmentId/$userId/${DateTime.now().millisecondsSinceEpoch}_$fileName';
 
-    await _supabase.storage.from('assignment_uploads').upload(
+    await _supabase.storage
+        .from('assignment_uploads')
+        .uploadBinary(
           path,
-          file,
+          fileBytes,
           fileOptions: const FileOptions(upsert: true),
         );
 
@@ -147,7 +131,7 @@ class AssignmentService {
     return null;
   }
 
-  /// ✅ HARD DELETE = TRUE UNSUBMIT
+  /// ✅ EXACT SIGNATURE YOUR UI CALLS
   Future<void> unsubmit(String assignmentId, String studentId) async {
     await _supabase
         .from('assignment_submissions')
@@ -161,7 +145,7 @@ class AssignmentService {
 
     final res = await _supabase
         .from('assignment_submissions')
-        .select('id, file_url, submitted_at, grade, feedback')
+        .select('id, file_url, grade, feedback')
         .eq('assignment_id', assignmentId)
         .eq('student_id', userId)
         .maybeSingle();
@@ -170,30 +154,23 @@ class AssignmentService {
 
     res['signed_url'] = await _supabase.storage
         .from('assignment_uploads')
-        .createSignedUrl(res['file_url'], 60 * 15);
+        .createSignedUrl(res['file_url'], 900);
 
     return res;
   }
 
   Future<List<Map<String, dynamic>>> getSubmissions(String assignmentId) async {
-    final submissions = await _supabase
+    final subs = await _supabase
         .from('assignment_submissions')
         .select('id, file_url, submitted_at, student_id')
-        .eq('assignment_id', assignmentId)
-        .order('submitted_at', ascending: false);
+        .eq('assignment_id', assignmentId);
 
-    final list = List<Map<String, dynamic>>.from(submissions);
+    final list = List<Map<String, dynamic>>.from(subs);
 
     for (final s in list) {
       s['signed_url'] = await _supabase.storage
           .from('assignment_uploads')
-          .createSignedUrl(s['file_url'], 60 * 15);
-
-      s['profile'] = await _supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', s['student_id'])
-          .maybeSingle();
+          .createSignedUrl(s['file_url'], 900);
     }
 
     return list;
