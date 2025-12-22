@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../services/assignment_service.dart';
@@ -21,30 +21,39 @@ class SubmitAssignmentScreen extends StatefulWidget {
 class _SubmitAssignmentScreenState
     extends State<SubmitAssignmentScreen> {
   final AssignmentService service = AssignmentService();
-  File? file;
+
+  Uint8List? fileBytes;
+  String? fileName;
   bool loading = false;
 
   Future<void> _pickFile() async {
-    final res = await FilePicker.platform.pickFiles();
+    final res = await FilePicker.platform.pickFiles(
+      withData: true,
+    );
+
     if (res != null) {
-      setState(() => file = File(res.files.single.path!));
+      setState(() {
+        fileBytes = res.files.single.bytes;
+        fileName = res.files.single.name;
+      });
     }
   }
 
   Future<void> _submit() async {
-    if (file == null) return;
+    if (fileBytes == null || fileName == null) return;
 
     setState(() => loading = true);
 
     final err = await service.submitAssignment(
       assignmentId: widget.assignmentId,
-      file: file!,
+      fileBytes: fileBytes!,
+      fileName: fileName!,
     );
 
     setState(() => loading = false);
 
     if (err == null) {
-      Navigator.pop(context, true); // 🔥 IMPORTANT
+      Navigator.pop(context, true);
     } else {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(err)));
@@ -64,12 +73,15 @@ class _SubmitAssignmentScreenState
               onPressed: _pickFile,
               label: const Text("Pick File"),
             ),
-            if (file != null)
+
+            if (fileName != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Text(file!.path.split('/').last),
+                child: Text(fileName!),
               ),
+
             const SizedBox(height: 20),
+
             loading
                 ? const CircularProgressIndicator()
                 : ElevatedButton(
@@ -82,6 +94,7 @@ class _SubmitAssignmentScreenState
     );
   }
 }
+
 
 /*import 'dart:io';
 import 'package:file_picker/file_picker.dart';
