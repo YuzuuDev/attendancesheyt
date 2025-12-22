@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/assignment_service.dart';
 import 'submit_assignment_screen.dart';
-import '../../supabase_client.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class StudentAssignmentsScreen extends StatefulWidget {
   final String classId;
@@ -36,6 +37,11 @@ class _StudentAssignmentsScreenState
     });
   }
 
+  bool _isPastDue(String? due) {
+    if (due == null) return false;
+    return DateTime.parse(due).isBefore(DateTime.now());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -48,121 +54,168 @@ class _StudentAssignmentsScreenState
                   itemCount: assignments.length,
                   itemBuilder: (context, index) {
                     final a = assignments[index];
+                    final locked =
+                        a['is_locked'] == true || _isPastDue(a['due_date']);
 
                     return Card(
-                      margin: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.all(12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(18),
                       ),
                       elevation: 6,
-                      child: ListTile(
-                        title: Text(
-                          a['title'],
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-
-                        /// 🔽 FUTUREBUILDER INSERTED HERE (REAL-TIME)
-                        subtitle: Column(
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Text(
+                              a['title'],
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+
                             if (a['description'] != null &&
                                 a['description'].toString().isNotEmpty)
                               Padding(
-                                padding: const EdgeInsets.only(top: 4),
+                                padding: const EdgeInsets.only(top: 6),
                                 child: Text(a['description']),
                               ),
 
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 8),
 
-                            /// 🔥 REAL-TIME SUBMISSION STATUS
+                            /// 📎 INSTRUCTION FILE
+                            if (a['instruction_signed_url'] != null)
+                              TextButton.icon(
+                                icon: const Icon(Icons.download),
+                                label:
+                                    const Text("Download Instructions"),
+                                onPressed: () async {
+                                  await launchUrl(
+                                    Uri.parse(
+                                        a['instruction_signed_url']),
+                                    mode:
+                                        LaunchMode.externalApplication,
+                                  );
+                                },
+                              ),
+
+                            const Divider(),
+
+                            /// 🔄 REAL-TIME SUBMISSION STATUS
                             FutureBuilder<Map<String, dynamic>?>(
-                              future: _service.getMySubmission(a['id']),
+                              future:
+                                  _service.getMySubmission(a['id']),
                               builder: (_, snap) {
                                 if (snap.connectionState ==
                                     ConnectionState.waiting) {
                                   return const Text(
                                     "Checking submission...",
                                     style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey,
-                                    ),
+                                        fontSize: 12,
+                                        color: Colors.grey),
                                   );
                                 }
 
-                                if (!snap.hasData || snap.data == null) {
-                                  return const Text(
-                                    "❌ Not submitted",
-                                    style: TextStyle(
-                                      color: Colors.red,
-                                      fontSize: 12,
-                                    ),
+                                /// ❌ NOT SUBMITTED
+                                if (!snap.hasData ||
+                                    snap.data == null) {
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        "❌ Not submitted",
+                                        style: TextStyle(
+                                            color: Colors.red),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      ElevatedButton(
+                                        onPressed: locked
+                                            ? null
+                                            : () async {
+                                                final res =
+                                                    await Navigator
+                                                        .push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        SubmitAssignmentScreen(
+                                                      assignmentId:
+                                                          a['id'],
+                                                      title:
+                                                          a['title'],
+                                                    ),
+                                                  ),
+                                                );
+
+                                                if (res == true) {
+                                                  setState(() {});
+                                                }
+                                              },
+                                        child: Text(
+                                            locked
+                                                ? "Locked"
+                                                : "Submit"),
+                                      ),
+                                    ],
                                   );
                                 }
 
-                                final sub = snap.data!;
-
+                                /// ✅ SUBMITTED
                                 return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
                                   children: [
                                     const Text(
                                       "✅ Submitted",
                                       style: TextStyle(
-                                        color: Colors.green,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                      ),
+                                          color: Colors.green,
+                                          fontWeight:
+                                              FontWeight.bold),
                                     ),
-
-                                    TextButton(
-                                      child: const Text("Unsubmit"),
-                                      onPressed: () async {
-                                        await _service.unsubmitAssignment(
-                                          assignmentId: a['id'],
-                                          studentId: Supabase
-                                              .instance.client.auth.currentUser!.id,
-                                        );
-                                        setState(() {}); // 🔥 INSTANT REFRESH
-                                      },
-                                    ),
-
-                                    if (sub['grade'] != null)
+                                    if (snap.data!['grade'] != null)
                                       Text(
-                                        "Grade: ${sub['grade']}",
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
-
-                                    if (sub['feedback'] != null &&
-                                        sub['feedback']
+                                          "Grade: ${snap.data!['grade']}"),
+                                    if (snap.data!['feedback'] != null &&
+                                        snap.data!['feedback']
                                             .toString()
                                             .isNotEmpty)
                                       Text(
-                                        "Feedback: ${sub['feedback']}",
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
+                                          "Feedback: ${snap.data!['feedback']}"),
+
+                                    const SizedBox(height: 6),
+
+                                    /// 🔄 UNSUBMIT
+                                    ElevatedButton(
+                                      style:
+                                          ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  Colors.orange),
+                                      onPressed: locked
+                                          ? null
+                                          : () async {
+                                              await _service.unsubmit(
+                                                a['id'],
+                                                Supabase.instance
+                                                    .client
+                                                    .auth
+                                                    .currentUser!
+                                                    .id,
+                                              );
+                                              setState(() {});
+                                            },
+                                      child: Text(
+                                          locked
+                                              ? "Locked"
+                                              : "Unsubmit"),
+                                    ),
                                   ],
                                 );
                               },
                             ),
                           ],
-                        ),
-
-                        /// ✅ SUBMIT BUTTON — UNTOUCHED
-                        trailing: ElevatedButton(
-                          child: const Text('Submit'),
-                          onPressed: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => SubmitAssignmentScreen(
-                                  assignmentId: a['id'],
-                                  title: a['title'],
-                                ),
-                              ),
-                            );
-                            setState(() {}); // 🔥 REFRESH AFTER SUBMIT
-                          },
                         ),
                       ),
                     );
@@ -171,6 +224,7 @@ class _StudentAssignmentsScreenState
     );
   }
 }
+
 
 /*import 'package:flutter/material.dart';
 import '../../services/assignment_service.dart';
