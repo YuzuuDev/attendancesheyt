@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../services/assignment_service.dart';
 import 'create_assignment_screen.dart';
 import 'assignment_submissions_screen.dart';
-import 'create_recitation_question_screen.dart'; // ✅ ADD THIS
 
 class TeacherAssignmentsScreen extends StatefulWidget {
   final String classId;
@@ -57,31 +56,13 @@ class _TeacherAssignmentsScreenState
               itemCount: assignments.length,
               itemBuilder: (_, i) {
                 final a = assignments[i];
-                final type = a['assignment_type']; // ✅ READ TYPE
 
                 return ListTile(
                   title: Text(a['title']),
-                  subtitle: Text(
-                    "${a['description'] ?? ''} • ${type.toUpperCase()}",
-                  ),
+                  subtitle: Text(a['description'] ?? ''),
                   trailing: IconButton(
                     icon: const Icon(Icons.folder),
                     onPressed: () {
-                      // 🔥 THIS IS WHERE IT GOES — EXACTLY HERE
-                      if (type == 'recitation') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                CreateRecitationQuestionScreen(
-                              assignmentId: a['id'],
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-
-                      // ✅ DEFAULT: ACTIVITY / FILE SUBMISSIONS
                       Navigator.push(
                         context,
                         MaterialPageRoute(
