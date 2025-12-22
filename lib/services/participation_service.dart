@@ -1,4 +1,61 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../supabase_client.dart';
+
+class ParticipationService {
+  /// 🔹 Teacher view
+  Future<List<Map<String, dynamic>>> getClassStudents(
+      String classId) async {
+    return await SupabaseClientInstance.supabase
+        .from('class_students')
+        .select(
+            'student_id, profiles(full_name, participation_points)')
+        .eq('class_id', classId);
+  }
+
+  /// 🔹 Teacher adds points
+  Future<void> addPoints({
+    required String classId,
+    required String studentId,
+    required int points,
+    required String reason,
+  }) async {
+    await SupabaseClientInstance.supabase
+        .from('participation_points')
+        .insert({
+      'class_id': classId,
+      'student_id': studentId,
+      'points': points,
+      'reason': reason,
+    });
+
+    // keep profile aggregate updated
+    await SupabaseClientInstance.supabase.rpc(
+      'recalculate_participation',
+      params: {'p_student_id': studentId},
+    );
+  }
+
+  /// 🔹 Student dashboard (PER CLASS)
+  Future<int> getStudentPointsForClass({
+    required String classId,
+  }) async {
+    final studentId =
+        SupabaseClientInstance.supabase.auth.currentUser!.id;
+
+    final res = await SupabaseClientInstance.supabase
+        .from('participation_points')
+        .select('points')
+        .eq('class_id', classId)
+        .eq('student_id', studentId);
+
+    int total = 0;
+    for (final r in res) {
+      total += r['points'] as int;
+    }
+    return total;
+  }
+}
+
+/*import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ParticipationService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -80,4 +137,4 @@ class ParticipationService {
       'reason': reason,
     });
   }
-}
+}*/
