@@ -18,7 +18,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
   final titleCtrl = TextEditingController();
   final descCtrl = TextEditingController();
 
-  DateTime? dueDate;
+  DateTime? dueDateTime;
   Uint8List? instructionBytes;
   String? instructionName;
 
@@ -29,15 +29,15 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
       lastDate: DateTime(2100),
     );
     if (date == null) return;
-  
+
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
     );
     if (time == null) return;
-  
+
     setState(() {
-      dueDate = DateTime(
+      dueDateTime = DateTime(
         date.year,
         date.month,
         date.day,
@@ -46,7 +46,6 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
       );
     });
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +72,6 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
               final res = await FilePicker.platform.pickFiles(
                 withData: true,
               );
-
               if (res != null && res.files.single.bytes != null) {
                 setState(() {
                   instructionBytes = res.files.single.bytes;
@@ -90,22 +88,17 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
             ),
 
           const SizedBox(height: 12),
+
           ElevatedButton(
             onPressed: _pickDueDateTime,
             child: const Text("Pick Due Date & Time"),
           ),
 
-          /*ElevatedButton(
-            child: const Text("Pick Due Date"),
-            onPressed: () async {
-              final d = await showDatePicker(
-                context: context,
-                firstDate: DateTime.now(),
-                lastDate: DateTime(2100),
-              );
-              if (d != null) setState(() => dueDate = d);
-            },
-          ),*/
+          if (dueDateTime != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(dueDateTime!.toLocal().toString()),
+            ),
 
           const SizedBox(height: 20),
 
@@ -115,7 +108,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                 classId: widget.classId,
                 title: titleCtrl.text,
                 description: descCtrl.text,
-                dueDate: dueDate,
+                dueDate: dueDateTime,
                 assignmentType: 'activity',
                 instructionBytes: instructionBytes,
                 instructionName: instructionName,
@@ -129,6 +122,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
     );
   }
 }
+
 
 
 
