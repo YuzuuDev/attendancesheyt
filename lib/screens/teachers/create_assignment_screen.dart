@@ -43,7 +43,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
         date.day,
         time.hour,
         time.minute,
-      ).toUtc;
+      ).toUtc();
     });
   }
 
