@@ -36,6 +36,9 @@ class _TeacherAssignmentsScreenState
   }
 
   void _editAssignment(Map<String, dynamic> a) {
+    //new shit
+    final maxPointsCtrl = TextEditingController(text: a['max_points'].toString());
+
     final titleCtrl = TextEditingController(text: a['title']);
     final descCtrl = TextEditingController(text: a['description']);
     DateTime? dueDate =
@@ -60,6 +63,15 @@ class _TeacherAssignmentsScreenState
                 decoration:
                     const InputDecoration(labelText: "Description"),
               ),
+              //new shit
+              TextField(
+                controller: maxPointsCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: "Max Points (e.g. 10, 20, 100)",
+                ),
+              ),
+
               const SizedBox(height: 10),
               ElevatedButton(
                 onPressed: () async {
@@ -115,6 +127,11 @@ class _TeacherAssignmentsScreenState
                 title: titleCtrl.text,
                 description: descCtrl.text,
                 dueDate: dueDate,
+              );
+              //new shit
+              await service.updateAssignmentMaxPoints(
+                assignmentId: a['id'],
+                maxPoints: int.parse(maxPointsCtrl.text),
               );
 
               if (newBytes != null && newName != null) {
