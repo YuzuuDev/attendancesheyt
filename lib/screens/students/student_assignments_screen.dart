@@ -205,20 +205,20 @@ class _StudentAssignmentsScreenState
 
                             return ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange),
+                                backgroundColor: Colors.orange,
+                              ),
                               onPressed: locked
                                   ? null
                                   : () async {
                                       await _service.unsubmit(
                                         a['id'],
-                                        Supabase.instance.client
-                                            .auth.currentUser!.id,
+                                        Supabase.instance.client.auth.currentUser!.id,
                                       );
-                                      setState(() {});
+                            
+                                      setState(() {}); // force rebuild
                                     },
-                              child: Text(
-                                  locked ? "Locked" : "Unsubmit"),
-                            );
+                              child: Text(locked ? "Locked" : "Unsubmit"),
+                            ),
                           },
                         ),
                       ],
