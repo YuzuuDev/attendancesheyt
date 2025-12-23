@@ -170,9 +170,11 @@ class _StudentAssignmentsScreenState
 
                         const Divider(),
 
+                        /// 🔽 SUBMISSION STATE
                         FutureBuilder<Map<String, dynamic>?>(
                           future: _service.getMySubmission(a['id']),
                           builder: (_, snap) {
+                            /// ❌ NOT SUBMITTED
                             if (!snap.hasData ||
                                 snap.data == null) {
                               return ElevatedButton(
@@ -199,22 +201,76 @@ class _StudentAssignmentsScreenState
                               );
                             }
 
-                            return ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.orange,
-                              ),
-                              onPressed: locked
-                                  ? null
-                                  : () async {
-                                      await _service.unsubmit(
-                                        a['id'],
-                                        Supabase.instance.client.auth
-                                            .currentUser!.id,
-                                      );
-                                      setState(() {});
-                                    },
-                              child: Text(
-                                  locked ? "Locked" : "Unsubmit"),
+                            /// ✅ SUBMITTED — REPLACE + UNSUBMIT
+                            return Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "✅ Submitted",
+                                  style: TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 6),
+
+                                /// 🔁 REPLACE FILE
+                                ElevatedButton.icon(
+                                  icon:
+                                      const Icon(Icons.swap_horiz),
+                                  label:
+                                      const Text("Replace File"),
+                                  onPressed: locked
+                                      ? null
+                                      : () async {
+                                          final res =
+                                              await Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  SubmitAssignmentScreen(
+                                                assignmentId:
+                                                    a['id'],
+                                                title: a['title'],
+                                              ),
+                                            ),
+                                          );
+                                          if (res == true) {
+                                            setState(() {});
+                                          }
+                                        },
+                                ),
+
+                                const SizedBox(height: 6),
+
+                                /// 🗑 UNSUBMIT
+                                ElevatedButton.icon(
+                                  icon:
+                                      const Icon(Icons.delete),
+                                  style:
+                                      ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        Colors.orange,
+                                  ),
+                                  label:
+                                      const Text("Unsubmit"),
+                                  onPressed: locked
+                                      ? null
+                                      : () async {
+                                          await _service.unsubmit(
+                                            a['id'],
+                                            Supabase.instance
+                                                .client
+                                                .auth
+                                                .currentUser!
+                                                .id,
+                                          );
+                                          setState(() {});
+                                        },
+                                ),
+                              ],
                             );
                           },
                         ),
