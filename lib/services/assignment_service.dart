@@ -140,8 +140,15 @@ class AssignmentService {
         .eq('id', assignmentId)
         .single();
 
-    if (assignment['is_locked'] == true) {
+    if (assignment['is_locked'] == true) { 
       return "Submissions are closed";
+    }
+
+    //new shit
+    final due = assignment['due_date'];
+    if (due != null &&
+        DateTime.now().isAfter(DateTime.parse(due))) {
+      return "Submission is past due";
     }
 
     final path =
