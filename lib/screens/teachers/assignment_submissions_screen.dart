@@ -55,7 +55,7 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Grade Submission"),
+        title: Text("Grade (${s['grade'] ?? '-'} / ${s['max_points']})"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -79,10 +79,18 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () async {
+              final grade = int.parse(gradeCtrl.text);
+              if (grade < 0 || grade > s['max_points']) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Grade must be between 0 and ${s['max_points']}")),
+                );
+                return;
+              }
+              
               await service.gradeSubmission(
                 submissionId: s['id'],
-                grade: int.parse(gradeCtrl.text),
-                feedback: feedbackCtrl.text,
+                grade: grade,
+                feedback: feedbackCtrl.text.isEmpty ? null : feedbackCtrl.text,
               );
               Navigator.pop(context);
             },
