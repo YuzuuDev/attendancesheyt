@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:video_player/video_player.dart';
 import '../../services/assignment_service.dart';
 
 class AssignmentSubmissionsScreen extends StatelessWidget {
@@ -16,45 +17,30 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
     super.key,
   });
 
-  bool _isImage(String path) {
-    final p = path.toLowerCase();
-    return p.endsWith('.png') ||
-        p.endsWith('.jpg') ||
-        p.endsWith('.jpeg') ||
-        p.endsWith('.gif') ||
-        p.endsWith('.webp');
-  }
+  bool _isImage(String p) =>
+      p.endsWith('.png') ||
+      p.endsWith('.jpg') ||
+      p.endsWith('.jpeg') ||
+      p.endsWith('.gif') ||
+      p.endsWith('.webp');
 
-  Future<File> _downloadFile(String signedUrl) async {
+  bool _isVideo(String p) =>
+      p.endsWith('.mp4') ||
+      p.endsWith('.mov') ||
+      p.endsWith('.webm') ||
+      p.endsWith('.avi');
+
+  Future<File> _download(String signedUrl) async {
     final uri = Uri.parse(signedUrl);
-    final client = HttpClient();
-
-    final request = await client.getUrl(uri);
-    final response = await request.close();
-
-    final Uint8List bytes =
-        await consolidateHttpClientResponseBytes(response);
+    final req = await HttpClient().getUrl(uri);
+    final res = await req.close();
+    final bytes = await consolidateHttpClientResponseBytes(res);
 
     final dir = await getApplicationDocumentsDirectory();
     final name = uri.pathSegments.last.split('?').first;
     final file = File('${dir.path}/$name');
-
     await file.writeAsBytes(bytes, flush: true);
     return file;
-  }
-
-  Future<void> _downloadAndOpen(
-    BuildContext context,
-    String signedUrl,
-  ) async {
-    try {
-      final file = await _downloadFile(signedUrl);
-      await OpenFilex.open(file.path);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to open file')),
-      );
-    }
   }
 
   @override
@@ -65,27 +51,18 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
       appBar: AppBar(title: Text(title)),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: service.getSubmissions(assignmentId),
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
+        builder: (_, snap) {
+          if (!snap.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (snap.hasError) {
-            return Center(child: Text(snap.error.toString()));
-          }
-
-          final data = snap.data ?? [];
-          if (data.isEmpty) {
-            return const Center(child: Text('No submissions'));
-          }
-
+          final data = snap.data!;
           return ListView.builder(
             itemCount: data.length,
             itemBuilder: (_, i) {
               final s = data[i];
-              final profile = s['profile'];
-              final path = s['file_path'];
-              final signedUrl = s['signed_url'];
+              final path = s['file_url'];
+              final url = s['signed_url'];
 
               return Card(
                 margin: const EdgeInsets.all(12),
@@ -94,87 +71,31 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        profile?['full_name'] ?? s['student_id'],
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      /// IMAGE PREVIEW (IF IMAGE)
-                      if (path != null && _isImage(path))
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            signedUrl,
-                            height: 180,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
+                      Text(s['student_id'],
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold)),
 
                       const SizedBox(height: 8),
 
-                      /// DOWNLOAD & OPEN — FOR ALL FILE TYPES
+                      /// 🖼️ IMAGE
+                      if (_isImage(path))
+                        Image.network(url, height: 180),
+
+                      /// 🎥 VIDEO
+                      if (_isVideo(path))
+                        SizedBox(
+                          height: 200,
+                          child: VideoPlayerWidget(url),
+                        ),
+
                       ElevatedButton.icon(
                         icon: const Icon(Icons.download),
                         label: const Text('Download & Open'),
-                        onPressed: () =>
-                            _downloadAndOpen(context, signedUrl),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      /// GRADE
-                      TextButton.icon(
-                        icon: const Icon(Icons.edit),
-                        label: const Text('Grade'),
-                        onPressed: () {
-                          final gradeCtrl = TextEditingController();
-                          final feedbackCtrl = TextEditingController();
-
-                          showDialog(
-                            context: context,
-                            builder: (_) => AlertDialog(
-                              title: const Text('Grade'),
-                              content: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  TextField(
-                                    controller: gradeCtrl,
-                                    keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Grade',
-                                    ),
-                                  ),
-                                  TextField(
-                                    controller: feedbackCtrl,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Feedback',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () async {
-                                    await service.gradeSubmission(
-                                      submissionId: s['id'],
-                                      grade:
-                                          int.parse(gradeCtrl.text),
-                                      feedback: feedbackCtrl.text,
-                                    );
-                                    Navigator.pop(context);
-                                  },
-                                  child: const Text('Save'),
-                                )
-                              ],
-                            ),
-                          );
+                        onPressed: () async {
+                          final f = await _download(url);
+                          await OpenFilex.open(f.path);
                         },
-                      )
+                      ),
                     ],
                   ),
                 ),
@@ -186,6 +107,45 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
     );
   }
 }
+
+/// 🎥 VIDEO PLAYER (TEACHER)
+class VideoPlayerWidget extends StatefulWidget {
+  final String url;
+  const VideoPlayerWidget(this.url, {super.key});
+
+  @override
+  State<VideoPlayerWidget> createState() => _VideoPlayerWidgetState();
+}
+
+class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
+  late VideoPlayerController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = VideoPlayerController.networkUrl(Uri.parse(widget.url))
+      ..initialize().then((_) => setState(() {}));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_c.value.isInitialized) return const SizedBox();
+    return GestureDetector(
+      onTap: () => _c.value.isPlaying ? _c.pause() : _c.play(),
+      child: AspectRatio(
+        aspectRatio: _c.value.aspectRatio,
+        child: VideoPlayer(_c),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+}
+
 
 
 /*import 'package:flutter/material.dart';
