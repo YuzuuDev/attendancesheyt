@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
@@ -14,6 +15,15 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
     required this.title,
     super.key,
   });
+
+  bool _isImage(String path) {
+    final p = path.toLowerCase();
+    return p.endsWith('.png') ||
+        p.endsWith('.jpg') ||
+        p.endsWith('.jpeg') ||
+        p.endsWith('.gif') ||
+        p.endsWith('.webp');
+  }
 
   Future<File> _download(String signedUrl) async {
     final uri = Uri.parse(signedUrl);
@@ -35,12 +45,12 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
   void _gradeDialog(
     BuildContext context,
     AssignmentService service,
-    Map<String, dynamic> sub,
+    Map<String, dynamic> s,
   ) {
     final gradeCtrl =
-        TextEditingController(text: sub['grade']?.toString());
-    final fbCtrl =
-        TextEditingController(text: sub['feedback']);
+        TextEditingController(text: s['grade']?.toString());
+    final feedbackCtrl =
+        TextEditingController(text: s['feedback']);
 
     showDialog(
       context: context,
@@ -56,7 +66,7 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
                   const InputDecoration(labelText: "Grade"),
             ),
             TextField(
-              controller: fbCtrl,
+              controller: feedbackCtrl,
               decoration:
                   const InputDecoration(labelText: "Feedback"),
             ),
@@ -70,9 +80,9 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               await service.gradeSubmission(
-                submissionId: sub['id'],
+                submissionId: s['id'],
                 grade: int.parse(gradeCtrl.text),
-                feedback: fbCtrl.text,
+                feedback: feedbackCtrl.text,
               );
               Navigator.pop(context);
             },
@@ -102,20 +112,47 @@ class AssignmentSubmissionsScreen extends StatelessWidget {
             itemCount: data.length,
             itemBuilder: (_, i) {
               final s = data[i];
+              final path = s['file_url'];
+              final signed = s['signed_url'];
 
               return Card(
                 margin: const EdgeInsets.all(12),
-                child: ListTile(
-                  title: Text(s['student_id']),
-                  subtitle: Text(
-                    s['grade'] != null
-                        ? "Grade: ${s['grade']}"
-                        : "Ungraded",
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit),
-                    onPressed: () =>
-                        _gradeDialog(context, service, s),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        s['student_id'],
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold),
+                      ),
+                      if (s['grade'] != null)
+                        Text("Grade: ${s['grade']}"),
+                      const SizedBox(height: 8),
+                      if (path != null &&
+                          signed != null &&
+                          _isImage(path))
+                        Image.network(
+                          signed,
+                          height: 160,
+                          fit: BoxFit.cover,
+                        ),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.open_in_new),
+                        label: const Text("Open File"),
+                        onPressed: () async {
+                          final f = await _download(signed);
+                          await OpenFilex.open(f.path);
+                        },
+                      ),
+                      ElevatedButton(
+                        onPressed: () =>
+                            _gradeDialog(context, service, s),
+                        child: const Text("Grade"),
+                      ),
+                    ],
                   ),
                 ),
               );
