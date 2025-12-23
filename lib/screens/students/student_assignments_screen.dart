@@ -25,20 +25,32 @@ class _StudentAssignmentsScreenState
     extends State<StudentAssignmentsScreen> {
   final AssignmentService _service = AssignmentService();
   bool loading = true;
+
   List<Map<String, dynamic>> assignments = [];
+  Map<String, Map<String, dynamic>> mySubmissions = {};
 
   @override
   void initState() {
     super.initState();
-    _loadAssignments();
+    _loadAll();
   }
 
-  Future<void> _loadAssignments() async {
-    final res = await _service.getAssignments(widget.classId);
-    setState(() {
-      assignments = res;
-      loading = false;
-    });
+  Future<void> _loadAll() async {
+    loading = true;
+    setState(() {});
+
+    assignments = await _service.getAssignments(widget.classId);
+
+    mySubmissions.clear();
+    for (final a in assignments) {
+      final sub = await _service.getMySubmission(a['id']);
+      if (sub != null) {
+        mySubmissions[a['id']] = sub;
+      }
+    }
+
+    loading = false;
+    setState(() {});
   }
 
   bool _isPastDue(String? due) {
@@ -101,8 +113,12 @@ class _StudentAssignmentsScreenState
                 final a = assignments[i];
                 final locked =
                     a['is_locked'] == true || _isPastDue(a['due_date']);
+
                 final filePath = a['instruction_file_url'];
                 final signed = a['instruction_signed_url'];
+
+                final submission = mySubmissions[a['id']];
+                final isSubmitted = submission != null;
 
                 return Card(
                   margin: const EdgeInsets.all(12),
@@ -170,58 +186,37 @@ class _StudentAssignmentsScreenState
 
                         const Divider(),
 
-                        /// 🔽 SUBMISSION STATE
-                        FutureBuilder<Map<String, dynamic>?>(
-                          future: _service.getMySubmission(a['id']),
-                          builder: (_, snap) {
-                            /// ❌ NOT SUBMITTED
-                            if (!snap.hasData ||
-                                snap.data == null) {
-                              return ElevatedButton(
-                                onPressed: locked
-                                    ? null
-                                    : () async {
-                                        final res =
-                                            await Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) =>
-                                                SubmitAssignmentScreen(
-                                              assignmentId: a['id'],
-                                              title: a['title'],
-                                            ),
-                                          ),
-                                        );
-                                        if (res == true) {
-                                          setState(() {});
-                                        }
-                                      },
-                                child: Text(
-                                    locked ? "Locked" : "Submit"),
-                              );
-                            }
+                        /// ---- SUBMISSION CONTROLS ----
 
-                            /// ✅ SUBMITTED — REPLACE + UNSUBMIT
-                            return Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  "✅ Submitted",
-                                  style: TextStyle(
-                                    color: Colors.green,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                        if (!isSubmitted)
+                          ElevatedButton(
+                            onPressed: locked
+                                ? null
+                                : () async {
+                                    final res =
+                                        await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            SubmitAssignmentScreen(
+                                          assignmentId: a['id'],
+                                          title: a['title'],
+                                        ),
+                                      ),
+                                    );
+                                    if (res == true) {
+                                      await _loadAll();
+                                    }
+                                  },
+                            child:
+                                Text(locked ? "Locked" : "Submit"),
+                          ),
 
-                                const SizedBox(height: 6),
-
-                                /// 🔁 REPLACE FILE
-                                ElevatedButton.icon(
-                                  icon:
-                                      const Icon(Icons.swap_horiz),
-                                  label:
-                                      const Text("Replace File"),
+                        if (isSubmitted)
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
                                   onPressed: locked
                                       ? null
                                       : () async {
@@ -231,49 +226,46 @@ class _StudentAssignmentsScreenState
                                             MaterialPageRoute(
                                               builder: (_) =>
                                                   SubmitAssignmentScreen(
-                                                assignmentId:
-                                                    a['id'],
-                                                title: a['title'],
+                                                assignmentId: a['id'],
+                                                title:
+                                                    "${a['title']} (Replace)",
                                               ),
                                             ),
                                           );
                                           if (res == true) {
-                                            setState(() {});
+                                            await _loadAll();
                                           }
                                         },
+                                  child: const Text("Replace File"),
                                 ),
-
-                                const SizedBox(height: 6),
-
-                                /// 🗑 UNSUBMIT
-                                ElevatedButton.icon(
-                                  icon:
-                                      const Icon(Icons.delete),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: ElevatedButton(
                                   style:
                                       ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        Colors.orange,
+                                    backgroundColor: Colors.orange,
                                   ),
-                                  label:
-                                      const Text("Unsubmit"),
                                   onPressed: locked
                                       ? null
                                       : () async {
                                           await _service.unsubmit(
                                             a['id'],
-                                            Supabase.instance
+                                            Supabase
+                                                .instance
                                                 .client
                                                 .auth
                                                 .currentUser!
                                                 .id,
                                           );
-                                          setState(() {});
+                                          await _loadAll();
                                         },
+                                  child:
+                                      const Text("Unsubmit"),
                                 ),
-                              ],
-                            );
-                          },
-                        ),
+                              ),
+                            ],
+                          ),
                       ],
                     ),
                   ),
@@ -283,6 +275,7 @@ class _StudentAssignmentsScreenState
     );
   }
 }
+
 
 
 /*import 'package:flutter/material.dart';
