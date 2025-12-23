@@ -132,13 +132,32 @@ class AssignmentService {
   }
 
   /// ✅ EXACT SIGNATURE YOUR UI CALLS
+  /// ✅ STUDENT — FULL UNSUBMIT (FILE + ROW)
   Future<void> unsubmit(String assignmentId, String studentId) async {
+    final submission = await _supabase
+        .from('assignment_submissions')
+        .select('file_url')
+        .eq('assignment_id', assignmentId)
+        .eq('student_id', studentId)
+        .maybeSingle();
+  
+    if (submission == null) return;
+  
+    final filePath = submission['file_url'];
+  
+    if (filePath != null) {
+      await _supabase.storage
+          .from('assignment_uploads')
+          .remove([filePath]);
+    }
+  
     await _supabase
         .from('assignment_submissions')
         .delete()
         .eq('assignment_id', assignmentId)
         .eq('student_id', studentId);
   }
+
 
   Future<Map<String, dynamic>?> getMySubmission(String assignmentId) async {
     final userId = _supabase.auth.currentUser!.id;
