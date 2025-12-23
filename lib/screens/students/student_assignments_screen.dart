@@ -4,21 +4,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
-import 'package:video_player/video_player.dart';
 import '../../services/assignment_service.dart';
 import 'submit_assignment_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StudentAssignmentsScreen extends StatefulWidget {
   final String classId;
-  const StudentAssignmentsScreen({super.key, required this.classId});
+
+  const StudentAssignmentsScreen({
+    super.key,
+    required this.classId,
+  });
 
   @override
   State<StudentAssignmentsScreen> createState() =>
       _StudentAssignmentsScreenState();
 }
 
-class _StudentAssignmentsScreenState extends State<StudentAssignmentsScreen> {
+class _StudentAssignmentsScreenState
+    extends State<StudentAssignmentsScreen> {
   final AssignmentService _service = AssignmentService();
   bool loading = true;
   List<Map<String, dynamic>> assignments = [];
@@ -30,37 +34,59 @@ class _StudentAssignmentsScreenState extends State<StudentAssignmentsScreen> {
   }
 
   Future<void> _loadAssignments() async {
-    assignments = await _service.getAssignments(widget.classId);
-    setState(() => loading = false);
+    final res = await _service.getAssignments(widget.classId);
+    setState(() {
+      assignments = res;
+      loading = false;
+    });
   }
 
-  bool _isPastDue(String? due) =>
-      due != null && DateTime.parse(due).isBefore(DateTime.now());
+  bool _isPastDue(String? due) {
+    if (due == null) return false;
+    return DateTime.parse(due).isBefore(DateTime.now());
+  }
 
-  bool _isImage(String p) =>
-      p.endsWith('.png') ||
-      p.endsWith('.jpg') ||
-      p.endsWith('.jpeg') ||
-      p.endsWith('.gif') ||
-      p.endsWith('.webp');
+  bool _isImage(String path) {
+    final p = path.toLowerCase();
+    return p.endsWith('.png') ||
+        p.endsWith('.jpg') ||
+        p.endsWith('.jpeg') ||
+        p.endsWith('.gif') ||
+        p.endsWith('.webp');
+  }
 
-  bool _isVideo(String p) =>
-      p.endsWith('.mp4') ||
-      p.endsWith('.mov') ||
-      p.endsWith('.webm') ||
-      p.endsWith('.avi');
+  bool _isVideo(String path) {
+    final p = path.toLowerCase();
+    return p.endsWith('.mp4') ||
+        p.endsWith('.mov') ||
+        p.endsWith('.webm') ||
+        p.endsWith('.avi');
+  }
 
-  Future<void> _downloadAndOpen(String signedUrl) async {
-    final uri = Uri.parse(signedUrl);
-    final req = await HttpClient().getUrl(uri);
-    final res = await req.close();
-    final bytes = await consolidateHttpClientResponseBytes(res);
+  Future<void> _downloadAndOpen(
+    BuildContext context,
+    String signedUrl,
+  ) async {
+    try {
+      final uri = Uri.parse(signedUrl);
+      final client = HttpClient();
+      final req = await client.getUrl(uri);
+      final res = await req.close();
 
-    final dir = await getApplicationDocumentsDirectory();
-    final name = uri.pathSegments.last.split('?').first;
-    final file = File('${dir.path}/$name');
-    await file.writeAsBytes(bytes, flush: true);
-    await OpenFilex.open(file.path);
+      final bytes =
+          await consolidateHttpClientResponseBytes(res);
+
+      final dir = await getApplicationDocumentsDirectory();
+      final name = uri.pathSegments.last.split('?').first;
+      final file = File('${dir.path}/$name');
+
+      await file.writeAsBytes(bytes, flush: true);
+      await OpenFilex.open(file.path);
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to open file')),
+      );
+    }
   }
 
   @override
@@ -75,8 +101,8 @@ class _StudentAssignmentsScreenState extends State<StudentAssignmentsScreen> {
                 final a = assignments[i];
                 final locked =
                     a['is_locked'] == true || _isPastDue(a['due_date']);
-                final url = a['instruction_signed_url'];
-                final path = a['instruction_file_url'] ?? '';
+                final filePath = a['instruction_file_url'];
+                final signed = a['instruction_signed_url'];
 
                 return Card(
                   margin: const EdgeInsets.all(12),
@@ -85,79 +111,116 @@ class _StudentAssignmentsScreenState extends State<StudentAssignmentsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(a['title'],
-                            style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold)),
+                        Text(
+                          a['title'],
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
 
-                        if (a['description'] != null)
-                          Text(a['description']),
+                        if (a['description'] != null &&
+                            a['description'].toString().isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(a['description']),
+                          ),
 
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
 
                         /// 🖼️ IMAGE PREVIEW
-                        if (url != null && _isImage(path))
+                        if (filePath != null &&
+                            signed != null &&
+                            _isImage(filePath))
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(url, height: 180),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              signed,
+                              height: 180,
+                              fit: BoxFit.cover,
+                            ),
                           ),
 
-                        /// 🎥 VIDEO PREVIEW
-                        if (url != null && _isVideo(path))
-                          SizedBox(
-                            height: 200,
-                            child: VideoPlayerWidget(url),
+                        /// 🎞️ VIDEO PREVIEW (ICON ONLY)
+                        if (filePath != null &&
+                            signed != null &&
+                            _isVideo(filePath))
+                          Container(
+                            height: 180,
+                            decoration: BoxDecoration(
+                              color: Colors.black12,
+                              borderRadius:
+                                  BorderRadius.circular(10),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.play_circle_fill,
+                                size: 64,
+                                color: Colors.black54,
+                              ),
+                            ),
                           ),
 
-                        if (url != null)
+                        if (signed != null)
                           ElevatedButton.icon(
                             icon: const Icon(Icons.download),
-                            label: const Text("Download Instructions"),
-                            onPressed: () => _downloadAndOpen(url),
+                            label:
+                                const Text("Download Instructions"),
+                            onPressed: () =>
+                                _downloadAndOpen(context, signed),
                           ),
 
                         const Divider(),
 
                         FutureBuilder<Map<String, dynamic>?>(
-                          future: _service.getMySubmission(a['id']),
+                          future:
+                              _service.getMySubmission(a['id']),
                           builder: (_, snap) {
-                            if (!snap.hasData) {
+                            if (!snap.hasData ||
+                                snap.data == null) {
                               return ElevatedButton(
                                 onPressed: locked
                                     ? null
                                     : () async {
-                                        final r = await Navigator.push(
+                                        final res =
+                                            await Navigator.push(
                                           context,
                                           MaterialPageRoute(
                                             builder: (_) =>
                                                 SubmitAssignmentScreen(
-                                              assignmentId: a['id'],
+                                              assignmentId:
+                                                  a['id'],
                                               title: a['title'],
                                             ),
                                           ),
                                         );
-                                        if (r == true) setState(() {});
+                                        if (res == true) {
+                                          setState(() {});
+                                        }
                                       },
-                                child: Text(locked ? 'Locked' : 'Submit'),
+                                child: Text(
+                                    locked ? "Locked" : "Submit"),
                               );
                             }
 
                             return ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange),
                               onPressed: locked
                                   ? null
                                   : () async {
                                       await _service.unsubmit(
                                         a['id'],
-                                        Supabase.instance.client.auth
-                                            .currentUser!.id,
+                                        Supabase.instance.client
+                                            .auth.currentUser!.id,
                                       );
                                       setState(() {});
                                     },
-                              child:
-                                  Text(locked ? 'Locked' : 'Unsubmit'),
+                              child: Text(
+                                  locked ? "Locked" : "Unsubmit"),
                             );
                           },
-                        )
+                        ),
                       ],
                     ),
                   ),
@@ -167,47 +230,6 @@ class _StudentAssignmentsScreenState extends State<StudentAssignmentsScreen> {
     );
   }
 }
-
-/// 🎥 SIMPLE VIDEO PLAYER
-class VideoPlayerWidget extends StatefulWidget {
-  final String url;
-  const VideoPlayerWidget(this.url, {super.key});
-
-  @override
-  State<VideoPlayerWidget> createState() => _VideoPlayerWidgetState();
-}
-
-class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
-  late VideoPlayerController _c;
-
-  @override
-  void initState() {
-    super.initState();
-    _c = VideoPlayerController.networkUrl(Uri.parse(widget.url))
-      ..initialize().then((_) => setState(() {}));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_c.value.isInitialized) return const SizedBox();
-    return GestureDetector(
-      onTap: () => _c.value.isPlaying ? _c.pause() : _c.play(),
-      child: AspectRatio(
-        aspectRatio: _c.value.aspectRatio,
-        child: VideoPlayer(_c),
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-}
-
-
-
 
 /*import 'package:flutter/material.dart';
 import '../../services/assignment_service.dart';
