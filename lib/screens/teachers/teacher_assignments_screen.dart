@@ -35,18 +35,16 @@ class _TeacherAssignmentsScreenState
     setState(() => loading = false);
   }
 
-  Future<void> _editAssignmentDialog(Map<String, dynamic> a) async {
+  void _editAssignment(Map<String, dynamic> a) {
     final titleCtrl = TextEditingController(text: a['title']);
-    final descCtrl =
-        TextEditingController(text: a['description'] ?? '');
-
-    DateTime? due =
+    final descCtrl = TextEditingController(text: a['description']);
+    DateTime? dueDate =
         a['due_date'] != null ? DateTime.parse(a['due_date']) : null;
 
     Uint8List? newBytes;
     String? newName;
 
-    await showDialog(
+    showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text("Edit Assignment"),
@@ -64,11 +62,6 @@ class _TeacherAssignmentsScreenState
               ),
               const SizedBox(height: 10),
               ElevatedButton(
-                child: Text(
-                  due == null
-                      ? "Pick Due Date & Time"
-                      : "Due: ${due!.toLocal()}",
-                ),
                 onPressed: () async {
                   final d = await showDatePicker(
                     context: context,
@@ -76,32 +69,37 @@ class _TeacherAssignmentsScreenState
                     lastDate: DateTime(2100),
                   );
                   if (d == null) return;
+
                   final t = await showTimePicker(
                     context: context,
                     initialTime: TimeOfDay.now(),
                   );
                   if (t == null) return;
+
                   setState(() {
-                    due = DateTime(
+                    dueDate = DateTime(
                         d.year, d.month, d.day, t.hour, t.minute);
                   });
                 },
+                child: Text(dueDate == null
+                    ? "Pick Due Date & Time"
+                    : dueDate.toString()),
               ),
               const SizedBox(height: 10),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.attach_file),
-                label: const Text("Replace Instruction File"),
+              ElevatedButton(
                 onPressed: () async {
                   final res =
-                      await FilePicker.platform.pickFiles(withData: true);
+                      await FilePicker.platform.pickFiles(
+                    withData: true,
+                  );
                   if (res != null &&
                       res.files.single.bytes != null) {
                     newBytes = res.files.single.bytes;
                     newName = res.files.single.name;
                   }
                 },
+                child: const Text("Replace Instruction File"),
               ),
-              if (newName != null) Text(newName!),
             ],
           ),
         ),
@@ -111,19 +109,26 @@ class _TeacherAssignmentsScreenState
             child: const Text("Cancel"),
           ),
           ElevatedButton(
-            child: const Text("Save"),
             onPressed: () async {
               await service.updateAssignment(
                 assignmentId: a['id'],
                 title: titleCtrl.text,
                 description: descCtrl.text,
-                dueDateTime: due,
-                newInstructionBytes: newBytes,
-                newInstructionName: newName,
+                dueDate: dueDate,
               );
+
+              if (newBytes != null && newName != null) {
+                await service.updateInstructionFile(
+                  assignmentId: a['id'],
+                  bytes: newBytes!,
+                  fileName: newName!,
+                );
+              }
+
               Navigator.pop(context);
               _load();
             },
+            child: const Text("Save"),
           ),
         ],
       ),
@@ -153,6 +158,7 @@ class _TeacherAssignmentsScreenState
               itemCount: assignments.length,
               itemBuilder: (_, i) {
                 final a = assignments[i];
+
                 return ListTile(
                   title: Text(a['title']),
                   subtitle: Text(a['description'] ?? ''),
@@ -161,7 +167,7 @@ class _TeacherAssignmentsScreenState
                     children: [
                       IconButton(
                         icon: const Icon(Icons.edit),
-                        onPressed: () => _editAssignmentDialog(a),
+                        onPressed: () => _editAssignment(a),
                       ),
                       IconButton(
                         icon: const Icon(Icons.folder),
