@@ -219,6 +219,40 @@ class AssignmentService {
   Future<List<Map<String, dynamic>>> getSubmissions(String assignmentId) async {
     final subs = await _supabase
         .from('assignment_submissions')
+        .select('''
+          id,
+          file_url,
+          submitted_at,
+          grade,
+          feedback,
+          student_id,
+          profiles!assignment_submissions_student_id_fkey(
+            full_name
+          ),
+          assignments(
+            max_points
+          )
+        ''')
+        .eq('assignment_id', assignmentId);
+  
+    final list = List<Map<String, dynamic>>.from(subs);
+  
+    for (final s in list) {
+      s['signed_url'] = await _supabase.storage
+          .from('assignment_uploads')
+          .createSignedUrl(s['file_url'], 900);
+  
+      s['max_points'] = s['assignments']['max_points'];
+      s['student_name'] =
+          s['profiles']?['full_name'] ?? 'Unknown Student';
+    }
+  
+    return list;
+  }
+
+  /*Future<List<Map<String, dynamic>>> getSubmissions(String assignmentId) async {
+    final subs = await _supabase
+        .from('assignment_submissions')
         .select('id, file_url, submitted_at, student_id, grade, feedback, assignments(max_points)')
         /*.select(
             'id, file_url, submitted_at, student_id, grade, feedback')*/
@@ -235,7 +269,7 @@ class AssignmentService {
     }
 
     return list;
-  }
+  }*/
 
   /// ✅ GRADE
   Future<void> gradeSubmission({
