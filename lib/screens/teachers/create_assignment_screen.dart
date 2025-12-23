@@ -22,6 +22,32 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
   Uint8List? instructionBytes;
   String? instructionName;
 
+  Future<void> _pickDueDateTime() async {
+    final date = await showDatePicker(
+      context: context,
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
+    );
+    if (date == null) return;
+  
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (time == null) return;
+  
+    setState(() {
+      dueDate = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
+    });
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -64,8 +90,12 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
             ),
 
           const SizedBox(height: 12),
-
           ElevatedButton(
+            onPressed: _pickDueDateTime,
+            child: const Text("Pick Due Date & Time"),
+          ),
+
+          /*ElevatedButton(
             child: const Text("Pick Due Date"),
             onPressed: () async {
               final d = await showDatePicker(
@@ -75,7 +105,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
               );
               if (d != null) setState(() => dueDate = d);
             },
-          ),
+          ),*/
 
           const SizedBox(height: 20),
 
