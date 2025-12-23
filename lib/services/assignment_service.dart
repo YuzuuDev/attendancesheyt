@@ -205,6 +205,50 @@ class AssignmentService {
       'feedback': feedback,
     }).eq('id', submissionId);
   }
+  Future<void> updateAssignment({
+    required String assignmentId,
+    required String title,
+    String? description,
+    DateTime? dueDate,
+    Uint8List? instructionBytes,
+    String? instructionName,
+  }) async {
+    String? newPath;
+  
+    if (instructionBytes != null && instructionName != null) {
+      final a = await _supabase
+          .from('assignments')
+          .select('class_id, instruction_file_url')
+          .eq('id', assignmentId)
+          .single();
+  
+      // delete old file
+      if (a['instruction_file_url'] != null) {
+        await _supabase.storage
+            .from('assignment_instructions')
+            .remove([a['instruction_file_url']]);
+      }
+  
+      newPath =
+          'instructions/${a['class_id']}/${DateTime.now().millisecondsSinceEpoch}_$instructionName';
+  
+      await _supabase.storage
+          .from('assignment_instructions')
+          .uploadBinary(
+            newPath,
+            instructionBytes,
+            fileOptions: const FileOptions(upsert: true),
+          );
+    }
+  
+    await _supabase.from('assignments').update({
+      'title': title,
+      'description': description,
+      'due_date': dueDate?.toIso8601String(),
+      if (newPath != null) 'instruction_file_url': newPath,
+    }).eq('id', assignmentId);
+  }
+
 }
 
 /*import 'dart:io';
