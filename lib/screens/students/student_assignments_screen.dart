@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
@@ -65,14 +64,6 @@ class _StudentAssignmentsScreenState
         p.endsWith('.webp');
   }
 
-  bool _isVideo(String path) {
-    final p = path.toLowerCase();
-    return p.endsWith('.mp4') ||
-        p.endsWith('.mov') ||
-        p.endsWith('.webm') ||
-        p.endsWith('.avi');
-  }
-
   Future<void> _downloadAndOpen(
     BuildContext context,
     String signedUrl,
@@ -112,11 +103,16 @@ class _StudentAssignmentsScreenState
                 final locked =
                     a['is_locked'] == true || _isPastDue(a['due_date']);
 
-                final filePath = a['instruction_file_url'];
-                final signed = a['instruction_signed_url'];
+                final instructionPath =
+                    a['instruction_file_url'];
+                final instructionSigned =
+                    a['instruction_signed_url'];
 
                 final submission = mySubmissions[a['id']];
                 final isSubmitted = submission != null;
+
+                final submissionPath = submission?['file_url'];
+                final submissionSigned = submission?['signed_url'];
 
                 return Card(
                   margin: const EdgeInsets.all(12),
@@ -142,50 +138,76 @@ class _StudentAssignmentsScreenState
 
                         const SizedBox(height: 10),
 
-                        if (filePath != null &&
-                            signed != null &&
-                            _isImage(filePath))
+                        /// ---------- INSTRUCTIONS ----------
+                        if (instructionPath != null &&
+                            instructionSigned != null &&
+                            _isImage(instructionPath))
                           ClipRRect(
                             borderRadius: BorderRadius.circular(10),
                             child: Image.network(
-                              signed,
-                              height: 180,
+                              instructionSigned,
+                              height: 160,
                               fit: BoxFit.cover,
                             ),
                           ),
 
-                        if (filePath != null &&
-                            signed != null &&
-                            _isVideo(filePath))
-                          Container(
-                            height: 180,
-                            decoration: BoxDecoration(
-                              color: Colors.black12,
-                              borderRadius:
-                                  BorderRadius.circular(10),
-                            ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.play_circle_fill,
-                                size: 64,
-                                color: Colors.black54,
-                              ),
-                            ),
-                          ),
-
-                        if (signed != null)
+                        if (instructionSigned != null)
                           ElevatedButton.icon(
                             icon: const Icon(Icons.download),
                             label:
                                 const Text("Download Instructions"),
-                            onPressed: () =>
-                                _downloadAndOpen(context, signed),
+                            onPressed: () => _downloadAndOpen(
+                                context, instructionSigned),
                           ),
 
                         const Divider(),
 
-                        /// -------- SUBMISSION FLOW (CORRECT) --------
+                        /// ---------- SUBMISSION PREVIEW (FIXED) ----------
+                        if (isSubmitted &&
+                            submissionPath != null &&
+                            submissionSigned != null &&
+                            _isImage(submissionPath))
+                          Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Your Submission:",
+                                style: TextStyle(
+                                    fontWeight:
+                                        FontWeight.bold),
+                              ),
+                              const SizedBox(height: 6),
+                              ClipRRect(
+                                borderRadius:
+                                    BorderRadius.circular(10),
+                                child: Image.network(
+                                  submissionSigned,
+                                  key: ValueKey(
+                                      submissionSigned), // 🔥 FIX
+                                  height: 180,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ],
+                          ),
 
+                        if (isSubmitted &&
+                            submissionSigned != null &&
+                            !_isImage(submissionPath ?? ''))
+                          ElevatedButton.icon(
+                            icon:
+                                const Icon(Icons.open_in_new),
+                            label:
+                                const Text("Open Submission"),
+                            onPressed: () =>
+                                _downloadAndOpen(
+                                    context, submissionSigned),
+                          ),
+
+                        const Divider(),
+
+                        /// ---------- FLOW ----------
                         if (!isSubmitted)
                           ElevatedButton(
                             onPressed: locked
@@ -197,7 +219,8 @@ class _StudentAssignmentsScreenState
                                       MaterialPageRoute(
                                         builder: (_) =>
                                             SubmitAssignmentScreen(
-                                          assignmentId: a['id'],
+                                          assignmentId:
+                                              a['id'],
                                           title: a['title'],
                                         ),
                                       ),
@@ -213,23 +236,26 @@ class _StudentAssignmentsScreenState
                         if (isSubmitted)
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
+                              backgroundColor:
+                                  Colors.orange,
                             ),
                             onPressed: locked
                                 ? null
                                 : () async {
                                     await _service.unsubmit(
                                       a['id'],
-                                      Supabase.instance.client.auth
-                                          .currentUser!.id,
+                                      Supabase.instance
+                                          .client
+                                          .auth
+                                          .currentUser!
+                                          .id,
                                     );
 
-                                    // IMMEDIATE STATE RESET
-                                    mySubmissions.remove(a['id']);
+                                    mySubmissions
+                                        .remove(a['id']);
                                     setState(() {});
                                   },
-                            child:
-                                Text(locked ? "Locked" : "Unsubmit"),
+                            child: const Text("Unsubmit"),
                           ),
                       ],
                     ),
@@ -240,6 +266,7 @@ class _StudentAssignmentsScreenState
     );
   }
 }
+
 
 
 
