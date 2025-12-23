@@ -219,8 +219,9 @@ class AssignmentService {
   Future<List<Map<String, dynamic>>> getSubmissions(String assignmentId) async {
     final subs = await _supabase
         .from('assignment_submissions')
-        .select(
-            'id, file_url, submitted_at, student_id, grade, feedback')
+        .select('id, file_url, submitted_at, student_id, grade, feedback, assignments(max_points)')
+        /*.select(
+            'id, file_url, submitted_at, student_id, grade, feedback')*/
         .eq('assignment_id', assignmentId);
 
     final list = List<Map<String, dynamic>>.from(subs);
@@ -229,6 +230,8 @@ class AssignmentService {
       s['signed_url'] = await _supabase.storage
           .from('assignment_uploads')
           .createSignedUrl(s['file_url'], 900);
+      
+      s['max_points'] = s['assignments']['max_points'];
     }
 
     return list;
