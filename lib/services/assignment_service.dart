@@ -42,6 +42,7 @@ class AssignmentService {
     });
   }
 
+  /// ✅ UPDATE METADATA
   Future<void> updateAssignment({
     required String assignmentId,
     required String title,
@@ -55,7 +56,7 @@ class AssignmentService {
     }).eq('id', assignmentId);
   }
 
-  /// 🔒 LOCK / UNLOCK
+  /// ✅ LOCK / UNLOCK
   Future<void> setAssignmentLock(
     String assignmentId,
     bool locked,
@@ -66,7 +67,7 @@ class AssignmentService {
         .eq('id', assignmentId);
   }
 
-  /// ❌ DELETE ASSIGNMENT (CASCADE HANDLED BY DB)
+  /// ✅ DELETE ASSIGNMENT
   Future<void> deleteAssignment(String assignmentId) async {
     await _supabase
         .from('assignments')
@@ -74,6 +75,7 @@ class AssignmentService {
         .eq('id', assignmentId);
   }
 
+  /// ✅ UPDATE / REPLACE INSTRUCTION FILE
   Future<void> updateInstructionFile({
     required String assignmentId,
     required Uint8List bytes,
@@ -134,7 +136,7 @@ class AssignmentService {
 
     final assignment = await _supabase
         .from('assignments')
-        .select('is_locked')
+        .select('is_locked, due_date')
         .eq('id', assignmentId)
         .single();
 
@@ -187,31 +189,53 @@ class AssignmentService {
         .eq('student_id', studentId);
   }
 
-  Future<List<Map<String, dynamic>>> getSubmissions(
-    String assignmentId,
-  ) async {
-    return List<Map<String, dynamic>>.from(
-      await _supabase
-          .from('assignment_submissions')
-          .select(
-              'id, file_url, student_id, grade, feedback, submitted_at')
-          .eq('assignment_id', assignmentId),
-    );
+  Future<Map<String, dynamic>?> getMySubmission(String assignmentId) async {
+    final userId = _supabase.auth.currentUser!.id;
+
+    final res = await _supabase
+        .from('assignment_submissions')
+        .select('id, file_url, grade, feedback')
+        .eq('assignment_id', assignmentId)
+        .eq('student_id', userId)
+        .maybeSingle();
+
+    if (res == null) return null;
+
+    res['signed_url'] = await _supabase.storage
+        .from('assignment_uploads')
+        .createSignedUrl(res['file_url'], 900);
+
+    return res;
   }
 
-  /// 📝 GRADE
+  Future<List<Map<String, dynamic>>> getSubmissions(String assignmentId) async {
+    final subs = await _supabase
+        .from('assignment_submissions')
+        .select(
+            'id, file_url, submitted_at, student_id, grade, feedback')
+        .eq('assignment_id', assignmentId);
+
+    final list = List<Map<String, dynamic>>.from(subs);
+
+    for (final s in list) {
+      s['signed_url'] = await _supabase.storage
+          .from('assignment_uploads')
+          .createSignedUrl(s['file_url'], 900);
+    }
+
+    return list;
+  }
+
+  /// ✅ GRADE
   Future<void> gradeSubmission({
     required String submissionId,
     required int grade,
     String? feedback,
   }) async {
-    await _supabase
-        .from('assignment_submissions')
-        .update({
-          'grade': grade,
-          'feedback': feedback,
-        })
-        .eq('id', submissionId);
+    await _supabase.from('assignment_submissions').update({
+      'grade': grade,
+      'feedback': feedback,
+    }).eq('id', submissionId);
   }
 }
 
