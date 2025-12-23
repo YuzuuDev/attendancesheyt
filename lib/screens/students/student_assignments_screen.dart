@@ -1,8 +1,12 @@
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import '../../services/assignment_service.dart';
 import 'submit_assignment_screen.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StudentAssignmentsScreen extends StatefulWidget {
   final String classId;
@@ -40,6 +44,34 @@ class _StudentAssignmentsScreenState
   bool _isPastDue(String? due) {
     if (due == null) return false;
     return DateTime.parse(due).isBefore(DateTime.now());
+  }
+
+  /// ✅ DOWNLOAD & OPEN INSTRUCTION FILE (LOCAL)
+  Future<void> _downloadAndOpenInstruction(
+    BuildContext context,
+    String signedUrl,
+  ) async {
+    try {
+      final uri = Uri.parse(signedUrl);
+      final client = HttpClient();
+
+      final request = await client.getUrl(uri);
+      final response = await request.close();
+
+      final Uint8List bytes =
+          await consolidateHttpClientResponseBytes(response);
+
+      final dir = await getApplicationDocumentsDirectory();
+      final name = uri.pathSegments.last.split('?').first;
+      final file = File('${dir.path}/$name');
+
+      await file.writeAsBytes(bytes, flush: true);
+      await OpenFilex.open(file.path);
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to open instruction file')),
+      );
+    }
   }
 
   @override
@@ -85,25 +117,22 @@ class _StudentAssignmentsScreenState
 
                             const SizedBox(height: 8),
 
-                            /// 📎 INSTRUCTION FILE
+                            /// 📎 INSTRUCTION FILE — LOCAL DOWNLOAD
                             if (a['instruction_signed_url'] != null)
-                              TextButton.icon(
+                              ElevatedButton.icon(
                                 icon: const Icon(Icons.download),
                                 label:
                                     const Text("Download Instructions"),
-                                onPressed: () async {
-                                  await launchUrl(
-                                    Uri.parse(
-                                        a['instruction_signed_url']),
-                                    mode:
-                                        LaunchMode.externalApplication,
-                                  );
-                                },
+                                onPressed: () =>
+                                    _downloadAndOpenInstruction(
+                                  context,
+                                  a['instruction_signed_url'],
+                                ),
                               ),
 
                             const Divider(),
 
-                            /// 🔄 REAL-TIME SUBMISSION STATUS
+                            /// 🔄 SUBMISSION STATUS
                             FutureBuilder<Map<String, dynamic>?>(
                               future:
                                   _service.getMySubmission(a['id']),
@@ -118,7 +147,6 @@ class _StudentAssignmentsScreenState
                                   );
                                 }
 
-                                /// ❌ NOT SUBMITTED
                                 if (!snap.hasData ||
                                     snap.data == null) {
                                   return Column(
@@ -163,7 +191,6 @@ class _StudentAssignmentsScreenState
                                   );
                                 }
 
-                                /// ✅ SUBMITTED
                                 return Column(
                                   crossAxisAlignment:
                                       CrossAxisAlignment.start,
@@ -187,7 +214,6 @@ class _StudentAssignmentsScreenState
 
                                     const SizedBox(height: 6),
 
-                                    /// 🔄 UNSUBMIT
                                     ElevatedButton(
                                       style:
                                           ElevatedButton.styleFrom(
@@ -224,6 +250,7 @@ class _StudentAssignmentsScreenState
     );
   }
 }
+
 
 
 /*import 'package:flutter/material.dart';
