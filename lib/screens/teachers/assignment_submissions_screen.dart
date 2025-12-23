@@ -161,7 +161,7 @@ class _AssignmentSubmissionsScreenState
                         CrossAxisAlignment.start,
                     children: [
                       Text(
-                        s['student_id'],
+                        s['student_name'],
                         style: const TextStyle(
                             fontWeight: FontWeight.bold),
                       ),
