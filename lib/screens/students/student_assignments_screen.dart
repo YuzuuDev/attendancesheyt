@@ -24,8 +24,8 @@ class StudentAssignmentsScreen extends StatefulWidget {
 class _StudentAssignmentsScreenState
     extends State<StudentAssignmentsScreen> {
   final AssignmentService _service = AssignmentService();
-  bool loading = true;
 
+  bool loading = true;
   List<Map<String, dynamic>> assignments = [];
   Map<String, Map<String, dynamic>> mySubmissions = {};
 
@@ -36,8 +36,7 @@ class _StudentAssignmentsScreenState
   }
 
   Future<void> _loadAll() async {
-    loading = true;
-    setState(() {});
+    setState(() => loading = true);
 
     assignments = await _service.getAssignments(widget.classId);
 
@@ -49,8 +48,7 @@ class _StudentAssignmentsScreenState
       }
     }
 
-    loading = false;
-    setState(() {});
+    setState(() => loading = false);
   }
 
   bool _isPastDue(String? due) {
@@ -186,7 +184,7 @@ class _StudentAssignmentsScreenState
 
                         const Divider(),
 
-                        /// ---- SUBMISSION CONTROLS ----
+                        /// -------- SUBMISSION FLOW (CORRECT) --------
 
                         if (!isSubmitted)
                           ElevatedButton(
@@ -213,58 +211,25 @@ class _StudentAssignmentsScreenState
                           ),
 
                         if (isSubmitted)
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: locked
-                                      ? null
-                                      : () async {
-                                          final res =
-                                              await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  SubmitAssignmentScreen(
-                                                assignmentId: a['id'],
-                                                title:
-                                                    "${a['title']} (Replace)",
-                                              ),
-                                            ),
-                                          );
-                                          if (res == true) {
-                                            await _loadAll();
-                                          }
-                                        },
-                                  child: const Text("Replace File"),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: ElevatedButton(
-                                  style:
-                                      ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.orange,
-                                  ),
-                                  onPressed: locked
-                                      ? null
-                                      : () async {
-                                          await _service.unsubmit(
-                                            a['id'],
-                                            Supabase
-                                                .instance
-                                                .client
-                                                .auth
-                                                .currentUser!
-                                                .id,
-                                          );
-                                          await _loadAll();
-                                        },
-                                  child:
-                                      const Text("Unsubmit"),
-                                ),
-                              ),
-                            ],
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                            ),
+                            onPressed: locked
+                                ? null
+                                : () async {
+                                    await _service.unsubmit(
+                                      a['id'],
+                                      Supabase.instance.client.auth
+                                          .currentUser!.id,
+                                    );
+
+                                    // IMMEDIATE STATE RESET
+                                    mySubmissions.remove(a['id']);
+                                    setState(() {});
+                                  },
+                            child:
+                                Text(locked ? "Locked" : "Unsubmit"),
                           ),
                       ],
                     ),
