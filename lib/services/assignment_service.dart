@@ -248,6 +248,17 @@ class AssignmentService {
   Future<void> lockExpiredAssignments() async {
     await _supabase.rpc('lock_expired_assignments');
   }
+  /// =============================== GRADING HELPERS ===============================
+
+  Future<void> updateAssignmentMaxPoints({
+    required String assignmentId,
+    required int maxPoints,
+  }) async {
+    await _supabase
+        .from('assignments')
+        .update({'max_points': maxPoints})
+        .eq('id', assignmentId);
+  }
 
 }
 
@@ -295,7 +306,7 @@ class AssignmentService {
     });
   }
 
-  /// ✅ NEW — UPDATE ASSIGNMENT METADATA
+  /// ✅ UPDATE METADATA
   Future<void> updateAssignment({
     required String assignmentId,
     required String title,
@@ -309,7 +320,26 @@ class AssignmentService {
     }).eq('id', assignmentId);
   }
 
-  /// ✅ TEACHER — UPDATE / REPLACE INSTRUCTION FILE
+  /// ✅ LOCK / UNLOCK
+  Future<void> setAssignmentLock(
+    String assignmentId,
+    bool locked,
+  ) async {
+    await _supabase
+        .from('assignments')
+        .update({'is_locked': locked})
+        .eq('id', assignmentId);
+  }
+
+  /// ✅ DELETE ASSIGNMENT
+  Future<void> deleteAssignment(String assignmentId) async {
+    await _supabase
+        .from('assignments')
+        .delete()
+        .eq('id', assignmentId);
+  }
+
+  /// ✅ UPDATE / REPLACE INSTRUCTION FILE
   Future<void> updateInstructionFile({
     required String assignmentId,
     required Uint8List bytes,
@@ -339,6 +369,7 @@ class AssignmentService {
   }
 
   Future<List<Map<String, dynamic>>> getAssignments(String classId) async {
+    await lockExpiredAssignments();
     final res = await _supabase
         .from('assignments')
         .select()
@@ -374,8 +405,15 @@ class AssignmentService {
         .eq('id', assignmentId)
         .single();
 
-    if (assignment['is_locked'] == true) {
+    if (assignment['is_locked'] == true) { 
       return "Submissions are closed";
+    }
+
+    //new shit
+    final due = assignment['due_date'];
+    if (due != null &&
+        DateTime.now().isAfter(DateTime.parse(due))) {
+      return "Submission is past due";
     }
 
     final path =
@@ -445,7 +483,8 @@ class AssignmentService {
   Future<List<Map<String, dynamic>>> getSubmissions(String assignmentId) async {
     final subs = await _supabase
         .from('assignment_submissions')
-        .select('id, file_url, submitted_at, student_id')
+        .select(
+            'id, file_url, submitted_at, student_id, grade, feedback')
         .eq('assignment_id', assignmentId);
 
     final list = List<Map<String, dynamic>>.from(subs);
@@ -459,6 +498,7 @@ class AssignmentService {
     return list;
   }
 
+  /// ✅ GRADE
   Future<void> gradeSubmission({
     required String submissionId,
     required int grade,
@@ -469,4 +509,8 @@ class AssignmentService {
       'feedback': feedback,
     }).eq('id', submissionId);
   }
+  Future<void> lockExpiredAssignments() async {
+    await _supabase.rpc('lock_expired_assignments');
+  }
+
 }*/
