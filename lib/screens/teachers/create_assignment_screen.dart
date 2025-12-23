@@ -69,9 +69,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
             icon: const Icon(Icons.attach_file),
             label: const Text("Attach Instruction File"),
             onPressed: () async {
-              final res = await FilePicker.platform.pickFiles(
-                withData: true,
-              );
+              final res = await FilePicker.platform.pickFiles(withData: true);
               if (res != null && res.files.single.bytes != null) {
                 setState(() {
                   instructionBytes = res.files.single.bytes;
@@ -91,14 +89,12 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
 
           ElevatedButton(
             onPressed: _pickDueDateTime,
-            child: const Text("Pick Due Date & Time"),
-          ),
-
-          if (dueDateTime != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(dueDateTime!.toLocal().toString()),
+            child: Text(
+              dueDateTime == null
+                  ? "Pick Due Date & Time"
+                  : "Due: ${dueDateTime!.toLocal()}",
             ),
+          ),
 
           const SizedBox(height: 20),
 
@@ -108,7 +104,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                 classId: widget.classId,
                 title: titleCtrl.text,
                 description: descCtrl.text,
-                dueDate: dueDateTime,
+                dueDateTime: dueDateTime,
                 assignmentType: 'activity',
                 instructionBytes: instructionBytes,
                 instructionName: instructionName,
@@ -122,8 +118,6 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
     );
   }
 }
-
-
 
 
 /*import 'package:flutter/material.dart';
