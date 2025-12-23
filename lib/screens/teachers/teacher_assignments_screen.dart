@@ -39,7 +39,7 @@ class _TeacherAssignmentsScreenState
     final titleCtrl = TextEditingController(text: a['title']);
     final descCtrl = TextEditingController(text: a['description']);
     DateTime? dueDate =
-        a['due_date'] != null ? DateTime.parse(a['due_date'])toLocal() : null;
+        a['due_date'] != null ? DateTime.parse(a['due_date']).toLocal() : null;
 
     Uint8List? newBytes;
     String? newName;
