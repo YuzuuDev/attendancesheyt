@@ -128,7 +128,6 @@ class _StudentAssignmentsScreenState
 
                         const SizedBox(height: 10),
 
-                        /// 🖼️ IMAGE PREVIEW
                         if (filePath != null &&
                             signed != null &&
                             _isImage(filePath))
@@ -141,7 +140,6 @@ class _StudentAssignmentsScreenState
                             ),
                           ),
 
-                        /// 🎞️ VIDEO PREVIEW (ICON ONLY)
                         if (filePath != null &&
                             signed != null &&
                             _isVideo(filePath))
@@ -173,8 +171,7 @@ class _StudentAssignmentsScreenState
                         const Divider(),
 
                         FutureBuilder<Map<String, dynamic>?>(
-                          future:
-                              _service.getMySubmission(a['id']),
+                          future: _service.getMySubmission(a['id']),
                           builder: (_, snap) {
                             if (!snap.hasData ||
                                 snap.data == null) {
@@ -188,8 +185,7 @@ class _StudentAssignmentsScreenState
                                           MaterialPageRoute(
                                             builder: (_) =>
                                                 SubmitAssignmentScreen(
-                                              assignmentId:
-                                                  a['id'],
+                                              assignmentId: a['id'],
                                               title: a['title'],
                                             ),
                                           ),
@@ -204,21 +200,21 @@ class _StudentAssignmentsScreenState
                             }
 
                             return ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange,
-                                ),
-                                onPressed: locked
-                                    ? null
-                                    : () async {
-                                        await _service.unsubmit(
-                                          a['id'],
-                                          Supabase.instance.client.auth.currentUser!.id,
-                                        );
-                              
-                                        setState(() {}); // force rebuild
-                                      },
-                                child: Text(locked ? "Locked" : "Unsubmit"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
                               ),
+                              onPressed: locked
+                                  ? null
+                                  : () async {
+                                      await _service.unsubmit(
+                                        a['id'],
+                                        Supabase.instance.client.auth
+                                            .currentUser!.id,
+                                      );
+                                      setState(() {});
+                                    },
+                              child: Text(
+                                  locked ? "Locked" : "Unsubmit"),
                             );
                           },
                         ),
@@ -231,6 +227,7 @@ class _StudentAssignmentsScreenState
     );
   }
 }
+
 
 /*import 'package:flutter/material.dart';
 import '../../services/assignment_service.dart';
