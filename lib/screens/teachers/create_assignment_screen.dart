@@ -18,7 +18,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
   final titleCtrl = TextEditingController();
   final descCtrl = TextEditingController();
 
-  DateTime? dueDateTime;
+  DateTime? dueDate;
   Uint8List? instructionBytes;
   String? instructionName;
 
@@ -37,7 +37,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
     if (time == null) return;
 
     setState(() {
-      dueDateTime = DateTime(
+      dueDate = DateTime(
         date.year,
         date.month,
         date.day,
@@ -69,7 +69,10 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
             icon: const Icon(Icons.attach_file),
             label: const Text("Attach Instruction File"),
             onPressed: () async {
-              final res = await FilePicker.platform.pickFiles(withData: true);
+              final res = await FilePicker.platform.pickFiles(
+                withData: true,
+              );
+
               if (res != null && res.files.single.bytes != null) {
                 setState(() {
                   instructionBytes = res.files.single.bytes;
@@ -90,9 +93,9 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
           ElevatedButton(
             onPressed: _pickDueDateTime,
             child: Text(
-              dueDateTime == null
+              dueDate == null
                   ? "Pick Due Date & Time"
-                  : "Due: ${dueDateTime!.toLocal()}",
+                  : dueDate.toString(),
             ),
           ),
 
@@ -104,7 +107,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                 classId: widget.classId,
                 title: titleCtrl.text,
                 description: descCtrl.text,
-                dueDateTime: dueDateTime,
+                dueDate: dueDate,
                 assignmentType: 'activity',
                 instructionBytes: instructionBytes,
                 instructionName: instructionName,
@@ -118,6 +121,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
     );
   }
 }
+
 
 
 /*import 'package:flutter/material.dart';
