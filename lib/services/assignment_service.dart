@@ -105,6 +105,7 @@ class AssignmentService {
   }
 
   Future<List<Map<String, dynamic>>> getAssignments(String classId) async {
+    await lockExpiredAssignments();
     final res = await _supabase
         .from('assignments')
         .select()
@@ -244,6 +245,10 @@ class AssignmentService {
       'feedback': feedback,
     }).eq('id', submissionId);
   }
+  Future<void> lockExpiredAssignments() async {
+    await _supabase.rpc('lock_expired_assignments');
+  }
+
 }
 
 /*import 'dart:typed_data';
