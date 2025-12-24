@@ -96,211 +96,257 @@ class _StudentAssignmentsScreenState
       appBar: AppBar(title: const Text('Assignments')),
       body: loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: assignments.length,
-              itemBuilder: (_, i) {
-                final a = assignments[i];
-                final locked =
-                    a['is_locked'] == true || _isPastDue(a['due_date']);
+          : assignments.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.assignment_outlined,
+                          size: 64, color: Colors.grey),
+                      SizedBox(height: 12),
+                      Text(
+                        "No assignments yet",
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: assignments.length,
+                  itemBuilder: (_, i) {
+                    final a = assignments[i];
+                    final locked =
+                        a['is_locked'] == true ||
+                        _isPastDue(a['due_date']);
 
-                final instructionPath =
-                    a['instruction_file_url'];
-                final instructionSigned =
-                    a['instruction_signed_url'];
+                    final submission = mySubmissions[a['id']];
+                    final isSubmitted = submission != null;
 
-                final submission = mySubmissions[a['id']];
-                final isSubmitted = submission != null;
+                    Color statusColor;
+                    String statusText;
 
-                final submissionPath = submission?['file_url'];
-                final submissionSigned = submission?['signed_url'];
+                    if (locked && !isSubmitted) {
+                      statusColor = Colors.red;
+                      statusText = "Locked";
+                    } else if (submission != null &&
+                        submission['grade'] != null) {
+                      statusColor = Colors.green;
+                      statusText = "Graded";
+                    } else if (isSubmitted) {
+                      statusColor = Colors.orange;
+                      statusText = "Submitted";
+                    } else {
+                      statusColor = Colors.blue;
+                      statusText = "Open";
+                    }
 
-                return Card(
-                  margin: const EdgeInsets.all(12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          a['title'],
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                    return AnimatedContainer(
+                      duration:
+                          const Duration(milliseconds: 250),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius:
+                            BorderRadius.circular(26),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                statusColor.withOpacity(0.18),
+                            blurRadius: 14,
+                            offset: const Offset(0, 8),
                           ),
-                        ),
-
-                        if (a['description'] != null &&
-                            a['description'].toString().isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(a['description']),
-                          ),
-
-                        const SizedBox(height: 10),
-
-                        /// ---------- INSTRUCTIONS ----------
-                        if (instructionPath != null &&
-                            instructionSigned != null &&
-                            _isImage(instructionPath))
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.network(
-                              instructionSigned,
-                              height: 160,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-
-                        if (instructionSigned != null)
-                          ElevatedButton.icon(
-                            icon: const Icon(Icons.download),
-                            label:
-                                const Text("Download Instructions"),
-                            onPressed: () => _downloadAndOpen(
-                                context, instructionSigned),
-                          ),
-
-                        const Divider(),
-
-                        /// ---------- SUBMISSION PREVIEW ----------
-                        if (isSubmitted &&
-                            submissionPath != null &&
-                            submissionSigned != null &&
-                            _isImage(submissionPath))
-                          Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                        children: [
+                          /// HEADER
+                          Row(
+                            mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
-                                "Your Submission:",
-                                style: TextStyle(
-                                    fontWeight:
-                                        FontWeight.bold),
-                              ),
-                              const SizedBox(height: 6),
-                              ClipRRect(
-                                borderRadius:
-                                    BorderRadius.circular(10),
-                                child: Image.network(
-                                  submissionSigned,
-                                  key: ValueKey(submissionSigned),
-                                  height: 180,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                        if (isSubmitted &&
-                            submissionSigned != null &&
-                            !_isImage(submissionPath ?? ''))
-                          ElevatedButton.icon(
-                            icon:
-                                const Icon(Icons.open_in_new),
-                            label:
-                                const Text("Open Submission"),
-                            onPressed: () =>
-                                _downloadAndOpen(
-                                    context, submissionSigned),
-                          ),
-
-                        /// ========== ✅ GRADING DISPLAY (HERE) ==========
-                        if (isSubmitted &&
-                            submission != null &&
-                            submission['grade'] != null)
-                          Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: [
-                              const Divider(),
-                              const Text(
-                                "Status: Graded",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green,
-                                ),
-                              ),
-                              Text(
-                                "Grade: ${submission['grade']} / ${a['max_points']}",
-                                style:
-                                    const TextStyle(fontSize: 16),
-                              ),
-                              if (submission['feedback'] != null &&
-                                  submission['feedback']
-                                      .toString()
-                                      .isNotEmpty)
-                                Padding(
-                                  padding:
-                                      const EdgeInsets.only(top: 6),
-                                  child: Text(
-                                    "Feedback: ${submission['feedback']}",
-                                    style: const TextStyle(
-                                        fontStyle:
-                                            FontStyle.italic),
+                              Expanded(
+                                child: Text(
+                                  a['title'],
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
+                              ),
+                              Container(
+                                padding:
+                                    const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: statusColor
+                                      .withOpacity(0.15),
+                                  borderRadius:
+                                      BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  statusText,
+                                  style: TextStyle(
+                                    color: statusColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
-                        /// =============================================
 
-                        const Divider(),
+                          if (a['description'] != null &&
+                              a['description']
+                                  .toString()
+                                  .isNotEmpty)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.only(top: 8),
+                              child: Text(
+                                a['description'],
+                                style: TextStyle(
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
 
-                        /// ---------- FLOW ----------
-                        if (!isSubmitted)
-                          ElevatedButton(
-                            onPressed: locked
-                                ? null
-                                : () async {
-                                    final res =
-                                        await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            SubmitAssignmentScreen(
-                                          assignmentId:
-                                              a['id'],
-                                          title: a['title'],
+                          const SizedBox(height: 14),
+
+                          /// INSTRUCTIONS
+                          if (a['instruction_signed_url'] != null)
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.download),
+                              label: const Text(
+                                  "Download Instructions"),
+                              onPressed: () =>
+                                  _downloadAndOpen(
+                                context,
+                                a['instruction_signed_url'],
+                              ),
+                            ),
+
+                          /// SUBMISSION PREVIEW
+                          if (isSubmitted &&
+                              submission?['signed_url'] !=
+                                  null)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.only(top: 12),
+                              child: ElevatedButton.icon(
+                                icon: const Icon(
+                                    Icons.open_in_new),
+                                label: const Text(
+                                    "Open Submission"),
+                                onPressed: () =>
+                                    _downloadAndOpen(
+                                  context,
+                                  submission!['signed_url'],
+                                ),
+                              ),
+                            ),
+
+                          /// GRADE
+                          if (isSubmitted &&
+                              submission != null &&
+                              submission['grade'] != null)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.only(top: 14),
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  const Divider(),
+                                  Text(
+                                    "Grade: ${submission['grade']} / ${a['max_points']}",
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight:
+                                          FontWeight.bold,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                  if (submission['feedback'] !=
+                                          null &&
+                                      submission['feedback']
+                                          .toString()
+                                          .isNotEmpty)
+                                    Padding(
+                                      padding:
+                                          const EdgeInsets.only(
+                                              top: 6),
+                                      child: Text(
+                                        submission['feedback'],
+                                        style: const TextStyle(
+                                          fontStyle:
+                                              FontStyle.italic,
                                         ),
                                       ),
-                                    );
-                                    if (res == true) {
-                                      await _loadAll();
-                                    }
-                                  },
-                            child:
-                                Text(locked ? "Locked" : "Submit"),
-                          ),
-
-                        if (isSubmitted)
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  Colors.orange,
+                                    ),
+                                ],
+                              ),
                             ),
-                            onPressed: locked
-                                ? null
-                                : () async {
-                                    await _service.unsubmit(
-                                      a['id'],
-                                      Supabase.instance
-                                          .client
-                                          .auth
-                                          .currentUser!
-                                          .id,
-                                    );
 
-                                    mySubmissions
-                                        .remove(a['id']);
-                                    setState(() {});
-                                  },
-                            child: const Text("Unsubmit"),
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+                          const SizedBox(height: 12),
+
+                          /// ACTIONS
+                          if (!isSubmitted)
+                            ElevatedButton(
+                              onPressed: locked
+                                  ? null
+                                  : () async {
+                                      final res =
+                                          await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              SubmitAssignmentScreen(
+                                            assignmentId:
+                                                a['id'],
+                                            title: a['title'],
+                                          ),
+                                        ),
+                                      );
+                                      if (res == true) {
+                                        await _loadAll();
+                                      }
+                                    },
+                              child: Text(
+                                  locked ? "Locked" : "Submit"),
+                            ),
+
+                          if (isSubmitted)
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    Colors.orange,
+                              ),
+                              onPressed: locked
+                                  ? null
+                                  : () async {
+                                      await _service.unsubmit(
+                                        a['id'],
+                                        Supabase.instance
+                                            .client
+                                            .auth
+                                            .currentUser!
+                                            .id,
+                                      );
+                                      mySubmissions
+                                          .remove(a['id']);
+                                      setState(() {});
+                                    },
+                              child: const Text("Unsubmit"),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }
@@ -469,7 +515,7 @@ class _StudentAssignmentsScreenState
 
                         const Divider(),
 
-                        /// ---------- SUBMISSION PREVIEW (FIXED) ----------
+                        /// ---------- SUBMISSION PREVIEW ----------
                         if (isSubmitted &&
                             submissionPath != null &&
                             submissionSigned != null &&
@@ -490,8 +536,7 @@ class _StudentAssignmentsScreenState
                                     BorderRadius.circular(10),
                                 child: Image.network(
                                   submissionSigned,
-                                  key: ValueKey(
-                                      submissionSigned), // 🔥 FIX
+                                  key: ValueKey(submissionSigned),
                                   height: 180,
                                   fit: BoxFit.cover,
                                 ),
@@ -511,6 +556,45 @@ class _StudentAssignmentsScreenState
                                 _downloadAndOpen(
                                     context, submissionSigned),
                           ),
+
+                        /// ========== ✅ GRADING DISPLAY (HERE) ==========
+                        if (isSubmitted &&
+                            submission != null &&
+                            submission['grade'] != null)
+                          Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              const Divider(),
+                              const Text(
+                                "Status: Graded",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green,
+                                ),
+                              ),
+                              Text(
+                                "Grade: ${submission['grade']} / ${a['max_points']}",
+                                style:
+                                    const TextStyle(fontSize: 16),
+                              ),
+                              if (submission['feedback'] != null &&
+                                  submission['feedback']
+                                      .toString()
+                                      .isNotEmpty)
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.only(top: 6),
+                                  child: Text(
+                                    "Feedback: ${submission['feedback']}",
+                                    style: const TextStyle(
+                                        fontStyle:
+                                            FontStyle.italic),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        /// =============================================
 
                         const Divider(),
 
