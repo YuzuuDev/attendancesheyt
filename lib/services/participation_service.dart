@@ -18,7 +18,7 @@ class ParticipationService {
     required String studentId,
     required void Function(int points) onUpdate,
   }) {
-    final channel = _supabase.channel('profiles-$studentId');
+    final channel = _supabase.channel('student-points-$studentId');
 
     channel.onPostgresChanges(
       event: PostgresChangeEvent.update,
@@ -30,9 +30,9 @@ class ParticipationService {
         value: studentId,
       ),
       callback: (payload) {
-        final newPoints =
+        final pts =
             payload.newRecord['participation_points'] as int? ?? 0;
-        onUpdate(newPoints);
+        onUpdate(pts);
       },
     );
 
@@ -56,9 +56,10 @@ class ParticipationService {
 
     final currentPoints = profile?['participation_points'] ?? 0;
 
-    await _supabase.from('profiles').update({
-      'participation_points': currentPoints + points,
-    }).eq('id', studentId);
+    await _supabase
+        .from('profiles')
+        .update({'participation_points': currentPoints + points})
+        .eq('id', studentId);
 
     await _supabase.from('participation_logs').insert({
       'class_id': classId,
@@ -69,6 +70,8 @@ class ParticipationService {
     });
   }
 }
+
+
 
 /*import 'package:supabase_flutter/supabase_flutter.dart';
 
