@@ -10,7 +10,7 @@ import 'teacher_assignments_screen.dart';
 import 'participation_screen.dart';
 
 // UI
-import '../../ui/widgets/primary_button.dart';
+import '../../primary_button.dart';
 
 class TeacherDashboard extends StatefulWidget {
   @override
