@@ -53,45 +53,41 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       appBar: AppBar(title: Text("Login")),
       body: Padding(
-        padding: EdgeInsets.all(20),
+        padding: EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            TextField(
-              controller: emailController,
-              decoration: InputDecoration(labelText: "Email"),
+            Text(
+              "Welcome Back",
+              style: Theme.of(context).textTheme.headlineMedium,
             ),
-            SizedBox(height: 10),
-            TextField(
+            SizedBox(height: 30),
+      
+            SoftTextField(controller: emailController, label: "Email"),
+            SoftTextField(
               controller: passwordController,
-              obscureText: true,
-              decoration: InputDecoration(labelText: "Password"),
+              label: "Password",
+              obscure: true,
             ),
+      
             SizedBox(height: 20),
-            isLoading
-                ? CircularProgressIndicator()
-                : Column(
-                    children: [
-                      ElevatedButton(
-                        onPressed: _signIn,
-                        child: Text("Login"),
-                      ),
-                      TextButton(
-                        onPressed: _resetPassword,
-                        child: Text("Forgot Password?"),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => SignUpScreen()),
-                          );
-                        },
-                        child: Text("Don't have an account? Sign Up"),
-                      ),
-
-                    ],
-                  ),
+      
+            PrimaryButton(
+              text: "Login",
+              loading: isLoading,
+              onTap: _signIn,
+            ),
+      
+            TextButton(onPressed: _resetPassword, child: Text("Forgot Password?")),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => SignUpScreen()),
+                );
+              },
+              child: Text("Create account"),
+            ),
           ],
         ),
       ),
