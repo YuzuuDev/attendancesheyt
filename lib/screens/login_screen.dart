@@ -79,8 +79,6 @@ class _LoginScreenState extends State<LoginScreen> {
               loading: isLoading,
               onTap: _signIn,
             ),
-      
-            TextButton(onPressed: _resetPassword, child: Text("Forgot Password?")),
             TextButton(
               onPressed: () {
                 Navigator.push(
