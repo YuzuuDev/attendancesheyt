@@ -40,27 +40,48 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Scaffold(
       appBar: AppBar(title: Text("Sign Up")),
       body: Padding(
-        padding: EdgeInsets.all(20),
+        padding: EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            TextField(controller: nameController, decoration: InputDecoration(labelText: "Full Name")),
-            SizedBox(height: 10),
-            TextField(controller: emailController, decoration: InputDecoration(labelText: "Email")),
-            SizedBox(height: 10),
-            TextField(controller: passwordController, obscureText: true, decoration: InputDecoration(labelText: "Password")),
-            SizedBox(height: 10),
-            DropdownButton<String>(
-              value: role,
-              items: ['student', 'teacher'].map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
-              onChanged: (value) {
-                setState(() => role = value!);
-              },
+            Text(
+              "Create Account",
+              style: Theme.of(context).textTheme.headlineMedium,
             ),
             SizedBox(height: 20),
-            isLoading
-                ? CircularProgressIndicator()
-                : ElevatedButton(onPressed: _signUp, child: Text("Sign Up")),
+      
+            SoftTextField(controller: nameController, label: "Full Name"),
+            SoftTextField(controller: emailController, label: "Email"),
+            SoftTextField(
+              controller: passwordController,
+              label: "Password",
+              obscure: true,
+            ),
+      
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: role,
+                  items: ['student', 'teacher']
+                      .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                      .toList(),
+                  onChanged: (v) => setState(() => role = v!),
+                ),
+              ),
+            ),
+      
+            SizedBox(height: 20),
+      
+            PrimaryButton(
+              text: "Sign Up",
+              loading: isLoading,
+              onTap: _signUp,
+            ),
           ],
         ),
       ),
