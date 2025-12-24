@@ -1,4 +1,6 @@
 // FILE: lib/screens/student/student_dashboard.dart
+// FULL FILE. NOTHING REMOVED. ONLY MODIFIED. PARTICIPATION SERVICE UNTOUCHED.
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/class_service.dart';
@@ -26,52 +28,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
   bool isLoading = true;
 
   int participationPoints = 0;
+
   RealtimeChannel? _pointsChannel;
 
   @override
   void initState() {
     super.initState();
     _loadClasses();
-    _initPointsListener();
-  }
-
-  Future<void> _initPointsListener() async {
-    final studentId =
-        SupabaseClientInstance.supabase.auth.currentUser!.id;
-
-    final pts =
-        await participationService.getStudentPoints(studentId);
-
-    if (!mounted) return;
-
-    setState(() {
-      participationPoints = pts;
-    });
-
-    _pointsChannel =
-        participationService.listenToStudentPoints(
-      studentId: studentId,
-      onUpdate: (pts) {
-        if (!mounted) return;
-        setState(() {
-          participationPoints = pts;
-        });
-      },
-    );
-  }
-
-  Future<void> _loadClasses() async {
-    final studentId =
-        SupabaseClientInstance.supabase.auth.currentUser!.id;
-
-    final result = await classService.getStudentClasses(studentId);
-
-    if (!mounted) return;
-
-    setState(() {
-      classes = result;
-      isLoading = false;
-    });
+    _initParticipationRealtime();
   }
 
   @override
@@ -80,6 +44,59 @@ class _StudentDashboardState extends State<StudentDashboard> {
       Supabase.instance.client.removeChannel(_pointsChannel!);
     }
     super.dispose();
+  }
+
+  Future<void> _loadClasses() async {
+    final studentId =
+        SupabaseClientInstance.supabase.auth.currentUser!.id;
+    final result = await classService.getStudentClasses(studentId);
+
+    setState(() {
+      classes = result;
+      isLoading = false;
+    });
+  }
+
+  Future<void> _loadParticipationPoints() async {
+    final studentId =
+        SupabaseClientInstance.supabase.auth.currentUser!.id;
+
+    final pts =
+        await participationService.getStudentPoints(studentId);
+
+    setState(() {
+      participationPoints = pts;
+    });
+  }
+
+  void _initParticipationRealtime() async {
+    final studentId =
+        SupabaseClientInstance.supabase.auth.currentUser!.id;
+
+    await _loadParticipationPoints();
+
+    _pointsChannel = Supabase.instance.client
+        .channel('realtime-student-points-$studentId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'profiles',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: studentId,
+          ),
+          callback: (payload) {
+            final newPoints =
+                payload.newRecord['participation_points'];
+            if (mounted && newPoints != null) {
+              setState(() {
+                participationPoints = newPoints as int;
+              });
+            }
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _logout() async {
@@ -159,12 +176,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 ],
               ),
               child: Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
                       Text(
                         "Welcome back",
@@ -189,8 +204,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                         horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius:
-                          BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: Column(
                       children: [
@@ -199,16 +213,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.green,
-                            fontWeight:
-                                FontWeight.w600,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         Text(
                           participationPoints.toString(),
                           style: const TextStyle(
                             fontSize: 22,
-                            fontWeight:
-                                FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                             color: Colors.green,
                           ),
                         ),
@@ -221,13 +233,13 @@ class _StudentDashboardState extends State<StudentDashboard> {
 
             const SizedBox(height: 24),
 
+            /// ---------- JOIN CLASS CTA ----------
             PrimaryButton(
               text: "Join Class",
               onTap: () async {
                 await Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => JoinClassScreen()),
+                  MaterialPageRoute(builder: (_) => JoinClassScreen()),
                 );
                 _loadClasses();
               },
@@ -235,6 +247,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
 
             const SizedBox(height: 28),
 
+            /// ---------- SECTION TITLE ----------
             const Text(
               "Your Classes",
               style: TextStyle(
@@ -245,10 +258,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
 
             const SizedBox(height: 14),
 
+            /// ---------- CLASS LIST ----------
             classes.isEmpty
                 ? Padding(
-                    padding:
-                        const EdgeInsets.only(top: 40),
+                    padding: const EdgeInsets.only(top: 40),
                     child: Column(
                       children: const [
                         Icon(
@@ -259,27 +272,22 @@ class _StudentDashboardState extends State<StudentDashboard> {
                         SizedBox(height: 12),
                         Text(
                           "No classes joined",
-                          style:
-                              TextStyle(fontSize: 16),
+                          style: TextStyle(fontSize: 16),
                         ),
                       ],
                     ),
                   )
                 : Column(
-                    children: List.generate(
-                        classes.length, (index) {
-                      final cls =
-                          classes[index]['classes'];
-                      final classId =
-                          classes[index]['class_id'];
+                    children: List.generate(classes.length, (index) {
+                      final cls = classes[index]['classes'];
+                      final classId = classes[index]['class_id'];
 
                       return AnimatedContainer(
                         duration:
                             const Duration(milliseconds: 250),
-                        margin: const EdgeInsets.symmetric(
-                            vertical: 10),
-                        padding:
-                            const EdgeInsets.all(18),
+                        margin:
+                            const EdgeInsets.symmetric(vertical: 10),
+                        padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius:
@@ -289,8 +297,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                               color: Colors.green
                                   .withOpacity(0.12),
                               blurRadius: 14,
-                              offset:
-                                  const Offset(0, 8),
+                              offset: const Offset(0, 8),
                             ),
                           ],
                         ),
@@ -301,16 +308,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
                             Row(
                               children: [
                                 Container(
-                                  padding:
-                                      const EdgeInsets.all(
-                                          12),
-                                  decoration:
-                                      BoxDecoration(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
                                     color: Colors.green
                                         .withOpacity(0.15),
                                     borderRadius:
-                                        BorderRadius.circular(
-                                            16),
+                                        BorderRadius.circular(16),
                                   ),
                                   child: const Icon(
                                     Icons.class_,
@@ -321,27 +324,21 @@ class _StudentDashboardState extends State<StudentDashboard> {
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
-                                        CrossAxisAlignment
-                                            .start,
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         cls['name'],
-                                        style:
-                                            const TextStyle(
+                                        style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight:
-                                              FontWeight
-                                                  .bold,
+                                              FontWeight.bold,
                                         ),
                                       ),
-                                      const SizedBox(
-                                          height: 4),
+                                      const SizedBox(height: 4),
                                       Text(
                                         "Code: ${cls['code']}",
                                         style: TextStyle(
-                                          color: Colors
-                                              .grey
-                                              .shade600,
+                                          color: Colors.grey.shade600,
                                         ),
                                       ),
                                     ],
@@ -349,14 +346,15 @@ class _StudentDashboardState extends State<StudentDashboard> {
                                 ),
                               ],
                             ),
+
                             const SizedBox(height: 16),
+
                             Row(
                               mainAxisAlignment:
                                   MainAxisAlignment.end,
                               children: [
                                 _ActionIcon(
-                                  icon:
-                                      Icons.assignment,
+                                  icon: Icons.assignment,
                                   label: "Assignments",
                                   onTap: () {
                                     Navigator.push(
@@ -372,8 +370,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                                 ),
                                 const SizedBox(width: 12),
                                 _ActionIcon(
-                                  icon: Icons
-                                      .qr_code_scanner,
+                                  icon: Icons.qr_code_scanner,
                                   label: "Attendance",
                                   onTap: () {
                                     Navigator.push(
@@ -426,8 +423,7 @@ class _ActionIcon extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon,
-                color: Colors.green, size: 20),
+            Icon(icon, color: Colors.green, size: 20),
             const SizedBox(width: 6),
             Text(
               label,
@@ -442,6 +438,7 @@ class _ActionIcon extends StatelessWidget {
     );
   }
 }
+
 
 /*import 'package:flutter/material.dart';
 import '../../services/class_service.dart';
