@@ -217,38 +217,52 @@ class AssignmentService {
   }
 
   Future<List<Map<String, dynamic>>> getSubmissions(String assignmentId) async {
+    // 1. Get submissions ONLY
     final subs = await _supabase
         .from('assignment_submissions')
-        .select('''
-          id,
-          file_url,
-          submitted_at,
-          grade,
-          feedback,
-          student_id,
-          profiles!assignment_submissions_student_id_fkey(
-            full_name
-          ),
-          assignments(
-            max_points
-          )
-        ''')
+        .select('id, file_url, submitted_at, student_id, grade, feedback')
         .eq('assignment_id', assignmentId);
   
-    final list = List<Map<String, dynamic>>.from(subs);
+    final submissions = List<Map<String, dynamic>>.from(subs);
   
-    for (final s in list) {
+    if (submissions.isEmpty) return submissions;
+  
+    // 2. Collect student IDs
+    final studentIds =
+        submissions.map((s) => s['student_id']).toSet().toList();
+  
+    // 3. Fetch profiles separately (SAFE)
+    final profilesRes = await _supabase
+        .from('profiles')
+        .select('id, full_name')
+        .inFilter('id', studentIds);
+  
+    final profiles = {
+      for (final p in profilesRes) p['id']: p['full_name']
+    };
+  
+    // 4. Fetch max_points once
+    final assignment = await _supabase
+        .from('assignments')
+        .select('max_points')
+        .eq('id', assignmentId)
+        .single();
+  
+    // 5. Enrich submissions
+    for (final s in submissions) {
       s['signed_url'] = await _supabase.storage
           .from('assignment_uploads')
           .createSignedUrl(s['file_url'], 900);
   
-      s['max_points'] = s['assignments']['max_points'];
       s['student_name'] =
-          s['profiles']?['full_name'] ?? 'Unknown Student';
+          profiles[s['student_id']] ?? 'Unknown Student';
+  
+      s['max_points'] = assignment['max_points'];
     }
   
-    return list;
+    return submissions;
   }
+
 
   /*Future<List<Map<String, dynamic>>> getSubmissions(String assignmentId) async {
     final subs = await _supabase
