@@ -1,4 +1,76 @@
+// FILE: lib/services/participation_service.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+class ParticipationService {
+  final SupabaseClient _supabase = Supabase.instance.client;
+
+  Future<int> getStudentPoints(String studentId) async {
+    final res = await _supabase
+        .from('profiles')
+        .select('participation_points')
+        .eq('id', studentId)
+        .maybeSingle();
+
+    return res?['participation_points'] ?? 0;
+  }
+
+  RealtimeChannel listenToStudentPoints({
+    required String studentId,
+    required void Function(int points) onUpdate,
+  }) {
+    final channel = _supabase.channel('profiles-$studentId');
+
+    channel.onPostgresChanges(
+      event: PostgresChangeEvent.update,
+      schema: 'public',
+      table: 'profiles',
+      filter: PostgresChangeFilter(
+        type: PostgresChangeFilterType.eq,
+        column: 'id',
+        value: studentId,
+      ),
+      callback: (payload) {
+        final newPoints =
+            payload.newRecord['participation_points'] as int? ?? 0;
+        onUpdate(newPoints);
+      },
+    );
+
+    channel.subscribe();
+    return channel;
+  }
+
+  Future<void> addPoints({
+    required String classId,
+    required String studentId,
+    required int points,
+    required String reason,
+  }) async {
+    final teacherId = _supabase.auth.currentUser!.id;
+
+    final profile = await _supabase
+        .from('profiles')
+        .select('participation_points')
+        .eq('id', studentId)
+        .maybeSingle();
+
+    final currentPoints = profile?['participation_points'] ?? 0;
+
+    await _supabase.from('profiles').update({
+      'participation_points': currentPoints + points,
+    }).eq('id', studentId);
+
+    await _supabase.from('participation_logs').insert({
+      'class_id': classId,
+      'student_id': studentId,
+      'teacher_id': teacherId,
+      'points': points,
+      'reason': reason,
+    });
+  }
+}
+
+/*import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ParticipationService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -80,4 +152,4 @@ class ParticipationService {
       'reason': reason,
     });
   }
-}
+}*/
