@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'push_notification_service.dart';
 
 class AuthService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -38,12 +39,33 @@ class AuthService {
         email: email,
         password: password,
       );
+  
+      if (response.user == null) {
+        return "Login failed";
+      }
+  
+      // 🔴 REQUIRED — REGISTER PUSH TOKEN AFTER LOGIN
+      await PushNotificationService.registerDeviceToken();
+      PushNotificationService.listenForegroundNotifications();
+  
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  /*Future<String?> signIn(String email, String password) async {
+    try {
+      final response = await _supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
 
       return response.user == null ? "Login failed" : null;
     } catch (e) {
       return e.toString();
     }
-  }
+  }*/
 
   Future<String?> resetPassword(String email) async {
     try {
