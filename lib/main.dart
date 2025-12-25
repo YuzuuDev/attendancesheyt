@@ -4,6 +4,9 @@ import 'screens/home_screen.dart';
 import 'supabase_client.dart';
 import 'app_theme.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'services/push_notification_service.dart';
+
 
 
 void main() async {
@@ -14,6 +17,13 @@ void main() async {
       SupabaseClientInstance.supabase.auth.currentUser != null;
   
   await Firebase.initializeApp();
+
+    // 🔴 REQUIRED FOR ANDROID 13+ AND IOS
+  await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
   
   runApp(MyApp(isLoggedIn: isLoggedIn));
 }
