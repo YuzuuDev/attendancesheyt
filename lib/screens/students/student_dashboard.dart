@@ -68,8 +68,49 @@ class _StudentDashboardState extends State<StudentDashboard> {
       participationPoints = pts;
     });
   }
-
+  //new shit
   void _initParticipationRealtime() async {
+    final studentId =
+        SupabaseClientInstance.supabase.auth.currentUser!.id;
+  
+    // Initial fetch (keep this)
+    await _loadParticipationPoints();
+  
+    // Safety: remove old channel if hot-reloaded or rebuilt
+    if (_pointsChannel != null) {
+      Supabase.instance.client.removeChannel(_pointsChannel!);
+    }
+  
+    _pointsChannel = Supabase.instance.client
+        .channel(
+          'student-points-$studentId',
+          opts: const RealtimeChannelConfig(
+            broadcast: BroadcastOptions(self: true),
+          ),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'profiles',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: studentId,
+          ),
+          callback: (payload) {
+            final newPoints = payload.newRecord['participation_points'];
+  
+            if (!mounted || newPoints == null) return;
+  
+            setState(() {
+              participationPoints = (newPoints as num).toInt();
+            });
+          },
+        )
+        .subscribe();
+  }
+
+  /*void _initParticipationRealtime() async {
     final studentId =
         SupabaseClientInstance.supabase.auth.currentUser!.id;
 
@@ -97,7 +138,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
           },
         )
         .subscribe();
-  }
+  }*/
 
   Future<void> _logout() async {
     final shouldLogout = await showDialog<bool>(
