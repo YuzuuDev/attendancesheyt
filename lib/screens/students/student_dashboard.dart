@@ -73,21 +73,16 @@ class _StudentDashboardState extends State<StudentDashboard> {
     final studentId =
         SupabaseClientInstance.supabase.auth.currentUser!.id;
   
-    // Initial fetch (keep this)
+    // Initial fetch stays
     await _loadParticipationPoints();
   
-    // Safety: remove old channel if hot-reloaded or rebuilt
+    // IMPORTANT: prevent duplicate subscriptions
     if (_pointsChannel != null) {
       Supabase.instance.client.removeChannel(_pointsChannel!);
     }
   
     _pointsChannel = Supabase.instance.client
-        .channel(
-          'student-points-$studentId',
-          opts: const RealtimeChannelConfig(
-            broadcast: BroadcastOptions(self: true),
-          ),
-        )
+        .channel('student-points-$studentId')
         .onPostgresChanges(
           event: PostgresChangeEvent.update,
           schema: 'public',
@@ -98,9 +93,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
             value: studentId,
           ),
           callback: (payload) {
-            final newPoints = payload.newRecord['participation_points'];
+            if (!mounted) return;
   
-            if (!mounted || newPoints == null) return;
+            final newPoints = payload.newRecord['participation_points'];
+            if (newPoints == null) return;
   
             setState(() {
               participationPoints = (newPoints as num).toInt();
