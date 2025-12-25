@@ -1,5 +1,4 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 class AuthService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -57,9 +56,5 @@ class AuthService {
 
   Future<void> signOut() async {
     await _supabase.auth.signOut();
-  }
-
-  Future<void> linkOneSignalUser(String userId) async {
-    await OneSignal.login(userId);
   }
 }
