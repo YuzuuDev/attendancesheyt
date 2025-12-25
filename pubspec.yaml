@@ -30,7 +30,7 @@ dependencies:
   open_filex: ^4.4.0
   webview_flutter: ^4.7.0
 
-  onesignal_flutter: ^5.0.4
+  firebase_messaging: ^15.0.0
 
   # UI
   flutter_material_pickers: 
