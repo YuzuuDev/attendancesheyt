@@ -33,6 +33,11 @@ dependencies:
   # UI
   flutter_material_pickers: 
 
+  #firebase
+  firebase_core: ^4.3.0
+  firebase_messaging: ^16.1.0
+  firebase_auth: ^6.1.3
+
 
 
 dev_dependencies:
