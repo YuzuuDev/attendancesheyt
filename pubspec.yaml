@@ -30,6 +30,8 @@ dependencies:
   open_filex: ^4.4.0
   webview_flutter: ^4.7.0
 
+  onesignal_flutter: ^5.0.4
+
   # UI
   flutter_material_pickers: 
 
