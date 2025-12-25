@@ -106,5 +106,17 @@ class ParticipationService {
       'points': points,
       'reason': reason,
     });
+
+    //new shit
+    final fcmToken = profile?['fcm_token'];
+    if (fcmToken != null) {
+      await _supabase.functions.invoke(
+        'notify_participation',
+        body: {
+          'fcmToken': fcmToken,
+          'points': points,
+        },
+      );
+    }
   }
 }
