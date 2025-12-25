@@ -1,4 +1,4 @@
-package com.example.gameflutter
+package com.example.attendanceit
 
 import io.flutter.embedding.android.FlutterActivity
 
