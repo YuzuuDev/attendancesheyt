@@ -3,6 +3,8 @@ import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'supabase_client.dart';
 import 'app_theme.dart';
+import 'package:firebase_core/firebase_core.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,7 +12,9 @@ void main() async {
 
   final isLoggedIn =
       SupabaseClientInstance.supabase.auth.currentUser != null;
-
+  
+  await Firebase.initializeApp();
+  
   runApp(MyApp(isLoggedIn: isLoggedIn));
 }
 
