@@ -5,12 +5,12 @@ plugins {
 }
 
 android {
-    namespace = "com.example.gameflutter"
+    namespace = "com.example.attendanceit"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     defaultConfig {
-        applicationId = "com.example.gameflutter"
+        applicationId = "com.example.attendanceit"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
