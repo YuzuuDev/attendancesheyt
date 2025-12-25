@@ -1,4 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'push_notification_service.dart'; // ⬅ ADD THIS IMPORT
+
 
 class AuthService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -38,6 +40,9 @@ class AuthService {
         email: email,
         password: password,
       );
+
+      await PushNotificationService().init();
+
 
       return response.user == null ? "Login failed" : null;
     } catch (e) {
