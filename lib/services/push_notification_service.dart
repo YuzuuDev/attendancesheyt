@@ -18,4 +18,16 @@ class PushNotificationService {
       'platform': Platform.isAndroid ? 'android' : 'ios',
     });
   }
+
+  //new shit
+  static void listenForegroundNotifications() {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      if (message.notification != null) {
+        print('🔔 PUSH RECEIVED');
+        print('Title: ${message.notification!.title}');
+        print('Body: ${message.notification!.body}');
+      }
+    });
+  }
+
 }
