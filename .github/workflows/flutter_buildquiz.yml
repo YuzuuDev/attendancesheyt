@@ -18,6 +18,14 @@ jobs:
         with:
           flutter-version: '3.35.4'
 
+      # 🔴 HARD RESET — REQUIRED
+      - name: Clean previous native state
+        run: |
+          flutter clean
+          rm -rf ~/.gradle
+          rm -rf android/.gradle
+          rm -rf build
+
       - name: Install dependencies
         run: flutter pub get
 
