@@ -105,37 +105,6 @@ class ParticipationService {
       'reason': reason,
     });
   }
-
-  /*Future<void> addPoints({
-    required String classId,
-    required String studentId,
-    required int points,
-    required String reason,
-  }) async {
-    final teacherId = _supabase.auth.currentUser!.id;
-
-    final profile = await _supabase
-        .from('profiles')
-        .select('participation_points')
-        .eq('id', studentId)
-        .maybeSingle();
-
-    final currentPoints = profile?['participation_points'] ?? 0;
-    final newPoints = currentPoints + points;
-
-    await _supabase
-        .from('profiles')
-        .update({'participation_points': newPoints})
-        .eq('id', studentId);
-
-    await _supabase.from('participation_logs').insert({
-      'class_id': classId,
-      'student_id': studentId,
-      'teacher_id': teacherId,
-      'points': points,
-      'reason': reason,
-    });
-  }*/
 }
 
 
