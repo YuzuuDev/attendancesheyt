@@ -5,25 +5,17 @@ import 'supabase_client.dart';
 import 'app_theme.dart';
 
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🔴 1. FIREBASE MUST COME FIRST
+  // ✅ FIREBASE CORE ONLY — SAFE
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // 🔴 2. REQUEST NOTIFICATION PERMISSION
-  await FirebaseMessaging.instance.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
-  );
-
-  // 🔴 3. INIT SUPABASE AFTER FIREBASE
+  // ✅ SUPABASE AFTER FIREBASE
   await SupabaseClientInstance.init();
 
   final isLoggedIn =
@@ -46,6 +38,7 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
 
 /*import 'package:flutter/material.dart';
 import 'screens/login_screen.dart';
