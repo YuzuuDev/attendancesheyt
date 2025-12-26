@@ -4,58 +4,8 @@ import 'package:uuid/uuid.dart';
 class AttendanceService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  Future<String?> startSession(
-    String classId,
-    String teacherId,
-    int durationMinutes,
-  ) async {
-    try {
-      final qrCode = Uuid().v4();
-      final startTime = DateTime.now().toUtc();
-      final endTime = startTime.add(Duration(minutes: durationMinutes));
   
-      // 1️⃣ CREATE SESSION
-      await _supabase.from('attendance_sessions').insert({
-        'class_id': classId,
-        'teacher_id': teacherId,
-        'start_time': startTime.toIso8601String(),
-        'end_time': endTime.toIso8601String(),
-        'qr_code': qrCode,
-      });
-  
-      // 2️⃣ FETCH STUDENT FCM TOKENS FOR THIS CLASS
-      final students = await _supabase
-          .from('class_students')
-          .select('profiles(fcm_token)')
-          .eq('class_id', classId);
-  
-      final List<String> tokens = [];
-  
-      for (final row in students) {
-        final token = row['profiles']?['fcm_token'];
-        if (token != null) {
-          tokens.add(token);
-        }
-      }
-  
-      // 3️⃣ CALL EDGE FUNCTION (THIS IS THE LINE YOU ASKED ABOUT)
-      if (tokens.isNotEmpty) {
-        await _supabase.functions.invoke(
-          'notify_attendance',
-          body: {
-            'tokens': tokens,
-            'className': 'Attendance Session', // or real class name if you have it
-          },
-        );
-      }
-  
-      return qrCode;
-    } catch (e) {
-      return e.toString();
-    }
-  }
-
-  /*Future<String?> startSession(String classId, String teacherId, int durationMinutes) async {
+  Future<String?> startSession(String classId, String teacherId, int durationMinutes) async {
     try {
       final qrCode = Uuid().v4(); // unique QR code
       final startTime = DateTime.now().toUtc();
@@ -73,7 +23,7 @@ class AttendanceService {
     } catch (e) {
       return e.toString();
     }
-  }*/
+  }
 
   Future<List<Map<String, dynamic>>> getActiveSessions(String classId) async {
     final now = DateTime.now().toUtc().toIso8601String();
