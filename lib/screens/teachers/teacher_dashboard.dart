@@ -43,7 +43,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(28),
         ),
         title: const Text("Log Out"),
         content: const Text("Do you want to log out?"),
@@ -75,7 +75,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
       barrierDismissible: false,
       builder: (_) => const AlertDialog(
         content: SizedBox(
-          height: 80,
+          height: 90,
           child: Center(child: CircularProgressIndicator()),
         ),
       ),
@@ -88,9 +88,9 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(28),
         ),
-        title: Text("Students • $className"),
+        title: Text("Students in $className"),
         content: SizedBox(
           width: double.maxFinite,
           child: students.isEmpty
@@ -100,15 +100,20 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                   itemCount: students.length,
                   itemBuilder: (_, index) {
                     final profile = students[index]['profiles'];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.green.shade100,
-                        child: const Icon(Icons.person,
-                            color: Colors.green),
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      title:
-                          Text(profile?['full_name'] ?? 'Unknown'),
-                      subtitle: Text(profile?['role'] ?? ''),
+                      child: ListTile(
+                        leading: const Icon(
+                          Icons.person_rounded,
+                          color: Colors.green,
+                        ),
+                        title: Text(profile?['full_name'] ?? 'Unknown'),
+                        subtitle: Text(profile?['role'] ?? ''),
+                      ),
                     );
                   },
                 ),
@@ -129,7 +134,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
       barrierDismissible: false,
       builder: (_) => const AlertDialog(
         content: SizedBox(
-          height: 80,
+          height: 90,
           child: Center(child: CircularProgressIndicator()),
         ),
       ),
@@ -147,9 +152,9 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(28),
         ),
-        title: Text("Attendance History • $className"),
+        title: Text("Attendance History - $className"),
         content: SizedBox(
           width: double.maxFinite,
           child: sessions.isEmpty
@@ -160,11 +165,9 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                   itemBuilder: (_, sIndex) {
                     final session = sessions[sIndex];
                     final start =
-                        DateTime.parse(session['start_time'])
-                            .toLocal();
+                        DateTime.parse(session['start_time']).toLocal();
                     final end =
-                        DateTime.parse(session['end_time'])
-                            .toLocal();
+                        DateTime.parse(session['end_time']).toLocal();
 
                     return FutureBuilder(
                       future: SupabaseClientInstance.supabase
@@ -182,71 +185,80 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                         }
 
                         final records =
-                            List<Map<String, dynamic>>.from(
-                                snapshot.data);
+                            List<Map<String, dynamic>>.from(snapshot.data);
 
                         return Card(
                           margin:
-                              const EdgeInsets.symmetric(vertical: 8),
+                              const EdgeInsets.symmetric(vertical: 10),
+                          elevation: 4,
                           shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(22),
                           ),
                           child: ExpansionTile(
                             title: Text(
-                              "${start.toIso8601String().substring(0, 10)} "
-                              "• ${start.hour}:${start.minute.toString().padLeft(2, '0')} - "
+                              "${start.toIso8601String().substring(0, 10)} | "
+                              "${start.hour}:${start.minute.toString().padLeft(2, '0')} - "
                               "${end.hour}:${end.minute.toString().padLeft(2, '0')}",
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold),
                             ),
-                            children: records.map((r) {
-                              final profile = r['profiles'];
-                              final status =
-                                  r['status'] ?? 'unknown';
-                              Color bg;
-                              switch (status) {
-                                case 'on_time':
-                                  bg = Colors.green.shade100;
-                                  break;
-                                case 'late':
-                                  bg = Colors.yellow.shade100;
-                                  break;
-                                case 'absent':
-                                  bg = Colors.red.shade100;
-                                  break;
-                                default:
-                                  bg = Colors.grey.shade100;
-                              }
-                              return Container(
-                                margin:
-                                    const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: bg,
-                                  borderRadius:
-                                      BorderRadius.circular(12),
-                                ),
-                                child: ListTile(
-                                  title: Text(
-                                      profile?['full_name'] ??
-                                          r['student_id']),
-                                  subtitle: Text(status
-                                      .replaceAll('_', ' ')
-                                      .toUpperCase()),
-                                  trailing: Text(
-                                    r['scanned_at'] != null
-                                        ? DateTime.parse(
-                                                r['scanned_at'])
-                                            .toLocal()
-                                            .toIso8601String()
-                                            .substring(11, 19)
-                                        : '',
-                                  ),
-                                ),
-                              );
-                            }).toList(),
+                            children: records.isEmpty
+                                ? const [
+                                    ListTile(
+                                      title:
+                                          Text("No students scanned"),
+                                    )
+                                  ]
+                                : records.map((r) {
+                                    final profile = r['profiles'];
+                                    final status =
+                                        r['status'] ?? 'unknown';
+
+                                    Color bg;
+                                    switch (status) {
+                                      case 'on_time':
+                                        bg = Colors.green.shade100;
+                                        break;
+                                      case 'late':
+                                        bg = Colors.orange.shade100;
+                                        break;
+                                      case 'absent':
+                                        bg = Colors.red.shade100;
+                                        break;
+                                      default:
+                                        bg = Colors.grey.shade100;
+                                    }
+
+                                    return Container(
+                                      margin: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: bg,
+                                        borderRadius:
+                                            BorderRadius.circular(14),
+                                      ),
+                                      child: ListTile(
+                                        title: Text(
+                                          profile?['full_name'] ??
+                                              r['student_id'],
+                                        ),
+                                        subtitle: Text(
+                                          status
+                                              .replaceAll('_', ' ')
+                                              .toUpperCase(),
+                                        ),
+                                        trailing: Text(
+                                          r['scanned_at'] != null
+                                              ? DateTime.parse(
+                                                      r['scanned_at'])
+                                                  .toLocal()
+                                                  .toIso8601String()
+                                                  .substring(11, 19)
+                                              : '',
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
                           ),
                         );
                       },
@@ -264,8 +276,6 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     );
   }
 
-  // (imports unchanged)
-
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -273,158 +283,226 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-  
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF2FBF5),
       appBar: AppBar(
-        title: const Text("Teacher Dashboard"),
-        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.green.shade700,
+        title: const Text(
+          "Teacher Dashboard",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout_rounded),
             onPressed: _logout,
           ),
         ],
       ),
-      body: ListView(
+      body: Padding(
         padding: const EdgeInsets.all(20),
-        children: [
-          PrimaryButton(
-            text: "Create Class",
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => CreateClassScreen(),
-                ),
-              ).then((_) => _loadClasses());
-            },
-          ),
-  
-          const SizedBox(height: 24),
-  
-          /// EMPTY STATE
-          if (classes.isEmpty)
-            const Center(child: Text("No classes")),
-  
-          /// CLASSES LIST (FIXED)
-          if (classes.isNotEmpty)
-            ...classes.map((cls) {
-              return Container(
-                margin: const EdgeInsets.only(bottom: 20),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.green.withOpacity(0.15),
-                      blurRadius: 22,
-                      offset: const Offset(0, 10),
-                    ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.green.shade400,
+                    Colors.green.shade700,
                   ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      cls['name'],
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.green.withOpacity(0.35),
+                    blurRadius: 22,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: PrimaryButton(
+                text: "Create Class",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => CreateClassScreen()),
+                  ).then((_) => _loadClasses());
+                },
+              ),
+            ),
+
+            const SizedBox(height: 26),
+
+            Expanded(
+              child: classes.isEmpty
+                  ? const Center(
+                      child: Text(
+                        "No classes",
+                        style: TextStyle(color: Colors.grey),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "Class Code • ${cls['code']}",
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
-                    const SizedBox(height: 18),
-  
-                    PrimaryButton(
-                      text: "View Students",
-                      onTap: () =>
-                          _showStudents(cls['id'], cls['name']),
-                    ),
-                    const SizedBox(height: 8),
-  
-                    PrimaryButton(
-                      text: "Start Attendance",
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => TeacherQRScreen(
-                              classId: cls['id'],
-                              className: cls['name'],
-                            ),
+                    )
+                  : ListView.builder(
+                      itemCount: classes.length,
+                      itemBuilder: (_, index) {
+                        final cls = classes[index];
+
+                        return AnimatedContainer(
+                          duration:
+                              const Duration(milliseconds: 260),
+                          margin: const EdgeInsets.symmetric(
+                              vertical: 14),
+                          padding: const EdgeInsets.all(22),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius:
+                                BorderRadius.circular(32),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.green
+                                    .withOpacity(0.18),
+                                blurRadius: 26,
+                                offset: const Offset(0, 14),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 22,
+                                    backgroundColor:
+                                        Colors.green.shade100,
+                                    child: const Icon(
+                                      Icons.class_,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Text(
+                                      cls['name'],
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight:
+                                            FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                "Class Code • ${cls['code']}",
+                                style: TextStyle(
+                                  color:
+                                      Colors.grey.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+
+                              PrimaryButton(
+                                text: "View Students",
+                                onTap: () => _showStudents(
+                                    cls['id'], cls['name']),
+                              ),
+                              const SizedBox(height: 8),
+
+                              PrimaryButton(
+                                text: "Start Attendance",
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          TeacherQRScreen(
+                                        classId: cls['id'],
+                                        className: cls['name'],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 8),
+
+                              PrimaryButton(
+                                text: "Attendance History",
+                                onTap: () =>
+                                    _showAttendanceHistory(
+                                        cls['id'], cls['name']),
+                              ),
+                              const SizedBox(height: 8),
+
+                              PrimaryButton(
+                                text: "Assignments",
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          TeacherAssignmentsScreen(
+                                        classId: cls['id'],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 12),
+
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      Colors.orange.shade400,
+                                  padding: const EdgeInsets
+                                      .symmetric(
+                                          vertical: 18),
+                                  shape:
+                                      RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(
+                                            26),
+                                  ),
+                                  elevation: 6,
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          ParticipationScreen(
+                                        classId: cls['id'],
+                                        className:
+                                            cls['name'],
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: const Text(
+                                  "Participation",
+                                  style: TextStyle(
+                                    fontWeight:
+                                        FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       },
                     ),
-                    const SizedBox(height: 8),
-  
-                    PrimaryButton(
-                      text: "Attendance History",
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => AttendanceHistoryScreen(
-                              classId: cls['id'],
-                              className: cls['name'],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 8),
-  
-                    PrimaryButton(
-                      text: "Assignments",
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => TeacherAssignmentsScreen(
-                              classId: cls['id'],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-  
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange.shade400,
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ParticipationScreen(
-                              classId: cls['id'],
-                              className: cls['name'],
-                            ),
-                          ),
-                        );
-                      },
-                      child: const Text("Participation"),
-                    ),
-                  ],
-                ),
-              );
-            }),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+
 
 /*import 'package:flutter/material.dart';
 import '../../services/class_service.dart';
