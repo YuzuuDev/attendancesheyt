@@ -264,6 +264,8 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     );
   }
 
+  // (imports unchanged)
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -271,7 +273,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-
+  
     return Scaffold(
       appBar: AppBar(
         title: const Text("Teacher Dashboard"),
@@ -292,133 +294,132 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (_) => CreateClassScreen()),
+                  builder: (_) => CreateClassScreen(),
+                ),
               ).then((_) => _loadClasses());
             },
           ),
+  
           const SizedBox(height: 24),
-          classes.isEmpty
-              ? const Center(child: Text("No classes"))
-              : ...classes.map((cls) {
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 20),
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(28),
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              Colors.green.withOpacity(0.15),
-                          blurRadius: 22,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
+  
+          /// EMPTY STATE
+          if (classes.isEmpty)
+            const Center(child: Text("No classes")),
+  
+          /// CLASSES LIST (FIXED)
+          if (classes.isNotEmpty)
+            ...classes.map((cls) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.green.withOpacity(0.15),
+                      blurRadius: 22,
+                      offset: const Offset(0, 10),
                     ),
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          cls['name'],
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Class Code • ${cls['code']}",
-                          style: TextStyle(
-                              color: Colors.grey.shade600),
-                        ),
-                        const SizedBox(height: 18),
-                        PrimaryButton(
-                          text: "View Students",
-                          onTap: () =>
-                              _showStudents(
-                                  cls['id'], cls['name']),
-                        ),
-                        const SizedBox(height: 8),
-                        PrimaryButton(
-                          text: "Start Attendance",
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    TeacherQRScreen(
-                                  classId: cls['id'],
-                                  className: cls['name'],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        PrimaryButton(
-                          text: "Attendance History",
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    AttendanceHistoryScreen(
-                                  classId: cls['id'],
-                                  className: cls['name'],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        PrimaryButton(
-                          text: "Assignments",
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    TeacherAssignmentsScreen(
-                                  classId: cls['id'],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Colors.orange.shade400,
-                            padding:
-                                const EdgeInsets.symmetric(
-                                    vertical: 16),
-                            shape:
-                                RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(22),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      cls['name'],
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Class Code • ${cls['code']}",
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: 18),
+  
+                    PrimaryButton(
+                      text: "View Students",
+                      onTap: () =>
+                          _showStudents(cls['id'], cls['name']),
+                    ),
+                    const SizedBox(height: 8),
+  
+                    PrimaryButton(
+                      text: "Start Attendance",
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => TeacherQRScreen(
+                              classId: cls['id'],
+                              className: cls['name'],
                             ),
                           ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    ParticipationScreen(
-                                  classId: cls['id'],
-                                  className: cls['name'],
-                                ),
-                              ),
-                            );
-                          },
-                          child:
-                              const Text("Participation"),
-                        ),
-                      ],
+                        );
+                      },
                     ),
-                  );
-                }).toList(),
+                    const SizedBox(height: 8),
+  
+                    PrimaryButton(
+                      text: "Attendance History",
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AttendanceHistoryScreen(
+                              classId: cls['id'],
+                              className: cls['name'],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+  
+                    PrimaryButton(
+                      text: "Assignments",
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => TeacherAssignmentsScreen(
+                              classId: cls['id'],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+  
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange.shade400,
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ParticipationScreen(
+                              classId: cls['id'],
+                              className: cls['name'],
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text("Participation"),
+                    ),
+                  ],
+                ),
+              );
+            }),
         ],
       ),
     );
